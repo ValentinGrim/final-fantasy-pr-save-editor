@@ -40,6 +40,9 @@ jobs:
             gcc pkg-config libgl1-mesa-dev xorg-dev \
             libwayland-dev libxkbcommon-dev gcc-mingw-w64-x86-64 zip
 
+      - name: go test
+        run: go test ./...
+
       - name: Install go-winres and generate resources
         run: make setup
 

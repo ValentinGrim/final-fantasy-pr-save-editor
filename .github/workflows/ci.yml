@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   linux:
-    name: Linux build + go vet
+    name: Linux build, vet and tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -34,6 +34,9 @@ jobs:
 
       - name: go vet
         run: go vet ./...
+
+      - name: go test
+        run: go test ./...
 
       # UPX is disabled in CI: packed binaries trigger antivirus false positives.
       - name: Build

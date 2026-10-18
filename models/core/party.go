@@ -55,7 +55,9 @@ func (p *Parties) ToSave(ud *save.UserData) (err error) {
 	v := make([]*save.CorpsSlotsValues, len(p.Parties))
 	for i, j := range p.Parties {
 		var csv save.CorpsSlotsValues
-		csv.Target, err = save.MarshalMany[save.CorpsSlotInfo](j)
+		if csv.Target, err = save.MarshalMany[save.CorpsSlotInfo](j); err != nil {
+			return
+		}
 		v[i] = &csv
 	}
 	if err = p.slots.SetCorpsSlotsValues(v); err != nil {

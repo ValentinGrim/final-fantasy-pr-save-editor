@@ -1,6 +1,7 @@
 package editors
 
 import (
+	"math"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -51,12 +52,13 @@ func (e *Transportation) createTabItem(game global.Game, transport *save.OwnedTr
 		}
 	}
 	in := inputs.NewIdEntryWithDataWithHint(&transport.MapID, finder.Maps)
+	// The time stamp ticks are a C# long, not an int.
 	c := container.NewVBox(
 		container.NewGridWithColumns(3, widget.NewLabel("Map ID"), in.ID, in.Label),
 		inputs.NewLabeledEntry("Position X", inputs.NewFloatEntryWithData(&p.X), 3),
 		inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&p.Y), 3),
-		inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&p.Z), 3),
+		inputs.NewLabeledEntry("Position Z", inputs.NewFloatEntryWithData(&p.Z), 3),
 		inputs.NewLabeledEntry("Facing", inputs.NewIntEntryWithData(&transport.Direction), 3),
-		inputs.NewLabeledEntry("Time Stamp Ticks", inputs.NewIntEntryWithData(&transport.TimeStampTicks), 3))
+		inputs.NewLabeledEntry("Time Stamp Ticks", inputs.NewIntEntryWithDataRange(&transport.TimeStampTicks, math.MinInt, math.MaxInt), 3))
 	return container.NewTabItem(name, container.NewBorder(nil, nil, c, nil)), true
 }

@@ -10,25 +10,36 @@ import (
 )
 
 type (
+	// IntEntry accepts digits with an optional leading '-'. Its value is
+	// clamped to [MinInt32, MaxInt32] unless it was made with a range.
 	IntEntry struct {
 		widget.Entry
+		min, max int
 	}
 	IntEntryBinding struct {
-		s binding.String
-		i binding.Int
+		s        binding.String
+		i        binding.Int
+		min, max int
 	}
 )
 
 func NewIntEntry() *IntEntry {
-	entry := &IntEntry{}
+	entry := &IntEntry{min: MinInt32, max: MaxInt32}
 	entry.ExtendBaseWidget(entry)
 	entry.Entry.Validator = nil
 	return entry
 }
 
 func NewIntEntryWithData(i *int) *IntEntry {
+	return NewIntEntryWithDataRange(i, MinInt32, MaxInt32)
+}
+
+// NewIntEntryWithDataRange binds the entry to i and clamps the value to
+// [min, max].
+func NewIntEntryWithDataRange(i *int, min, max int) *IntEntry {
 	entry := NewIntEntry()
-	data := NewIntEntryBinding(i)
+	entry.min, entry.max = min, max
+	data := NewIntEntryBindingRange(i, min, max)
 	entry.SetInt(*i)
 	entry.Bind(data.s)
 	entry.Entry.Validator = nil
@@ -44,20 +55,15 @@ func NewLabeledEntryWithData(label string, entry *widget.Entry) *IdEntry {
 }
 
 func NewLabeledIntEntryWithData(label string, i *int) *IdEntry {
-	entry := NewIntEntry()
-	data := NewIntEntryBinding(i)
-	entry.SetInt(*i)
-	entry.Bind(data.s)
-	entry.Entry.Validator = nil
 	return &IdEntry{
-		ID:    entry,
+		ID:    NewIntEntryWithData(i),
 		Label: widget.NewLabel(label),
 	}
 }
 
 func (e *IntEntry) Int() int {
-	i, err := strconv.Atoi(e.Text)
-	if err != nil {
+	i, _, ok := parseInt(e.Text, e.min, e.max)
+	if !ok {
 		i = 0
 	}
 	return i
@@ -68,8 +74,16 @@ func (e *IntEntry) SetInt(i int) {
 }
 
 func (e *IntEntry) TypedRune(r rune) {
-	if r >= '0' && r <= '9' {
-		e.Entry.TypedRune(r)
+	if (r >= '0' && r <= '9') || r == '-' {
+		guardInput(&e.Entry, isPartialInt, func() { e.Entry.TypedRune(r) })
+		e.clamp()
+	}
+}
+
+// clamp shows the clamped value when the text is out of range.
+func (e *IntEntry) clamp() {
+	if i, clamped, ok := parseInt(e.Text, e.min, e.max); ok && clamped {
+		e.SetInt(i)
 	}
 }
 
@@ -79,11 +93,15 @@ func (e *IntEntry) TypedShortcut(shortcut fyne.Shortcut) {
 		e.Entry.TypedShortcut(shortcut)
 		return
 	}
-
-	content := paste.Clipboard.Content()
-	if _, err := strconv.ParseFloat(content, 64); err == nil {
-		e.Entry.TypedShortcut(shortcut)
+	paste = cleanPaste(paste, nil)
+	if paste.Clipboard == nil || !isPartialInt(paste.Clipboard.Content()) {
+		return
 	}
+	guardInput(&e.Entry, func(s string) bool {
+		_, _, ok := parseInt(s, e.min, e.max)
+		return ok || s == ""
+	}, func() { e.Entry.TypedShortcut(paste) })
+	e.clamp()
 }
 
 func (e *IntEntry) Keyboard() mobile.KeyboardType {
@@ -91,28 +109,34 @@ func (e *IntEntry) Keyboard() mobile.KeyboardType {
 }
 
 func NewIntEntryBinding(i *int) IntEntryBinding {
+	return NewIntEntryBindingRange(i, MinInt32, MaxInt32)
+}
+
+func NewIntEntryBindingRange(i *int, min, max int) IntEntryBinding {
 	s := binding.NewString()
 	_ = s.Set(strconv.Itoa(*i))
 	b := IntEntryBinding{
-		s: s,
-		i: binding.BindInt(i),
+		s:   s,
+		i:   binding.BindInt(i),
+		min: min,
+		max: max,
 	}
 	b.s.AddListener(b)
 	return b
 }
 
+// DataChanged copies the text to the int. Text that is not (yet) a number,
+// like "-", leaves the int as it is; a number out of range is clamped (the
+// entry shows the clamped value, see IntEntry.clamp).
 func (b IntEntryBinding) DataChanged() {
-	if s, err := b.s.Get(); err == nil {
-		if s == "" {
-			_ = b.i.Set(0)
-		} else {
-			var i int
-			if i, err = strconv.Atoi(s); err == nil {
-				_ = b.i.Set(i)
-			}
-		}
-	} else {
-
+	s, err := b.s.Get()
+	if err != nil {
+		return
+	}
+	if s == "" {
+		_ = b.i.Set(0)
+	} else if i, _, ok := parseInt(s, b.min, b.max); ok {
+		_ = b.i.Set(i)
 	}
 }
 

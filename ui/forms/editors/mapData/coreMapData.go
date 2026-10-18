@@ -87,15 +87,13 @@ func (e *MapData) CreateRenderer() fyne.WidgetRenderer {
 		container.NewGridWithColumns(2, search.Fields(), search.Filter())))
 }
 
+// loadParty decodes the player entity of party into party.PE, so the
+// editor edits the party itself; MapData.ToSave encodes PE again.
 func (e *MapData) loadParty(party *save.OtherPartyData) (p *save.OtherPartyData, loaded bool) {
 	pe, err := party.PlayerEntity()
 	if err == nil {
-		p = &save.OtherPartyData{
-			MapID:                    party.MapID,
-			PointIn:                  party.PointIn,
-			PE:                       pe,
-			PlayableCharacterCorpsId: party.PlayableCharacterCorpsId,
-		}
+		party.PE = pe
+		p = party
 		loaded = true
 	}
 	return

@@ -27,9 +27,7 @@ func NewInventory(game global.Game, items []*save.OwnedItems, order []int) *Inve
 		Rows:  make([]*save.OwnedItems, 0, len(items)+20),
 		order: order,
 	}
-	for _, i := range items {
-		inv.Rows = append(inv.Rows, i)
-	}
+	inv.Rows = append(inv.Rows, items...)
 	for i := 0; i < 20; i++ {
 		inv.Rows = append(inv.Rows, &save.OwnedItems{})
 	}
@@ -57,14 +55,25 @@ func (i *Inventory) ToSave() (inv []*save.OwnedItems, order []int, err error) {
 	inv = i.debugToSave(inv)
 
 	if len(i.order) > 0 && i.ResetSortOrder {
-		order = make([]int, len(i.Rows))
-		for j := 0; j < len(i.Rows); j++ {
-			order[j] = j + 1
-		}
+		order = sortOrder(inv)
 	} else {
 		order = i.order
 	}
 	return inv, order, nil
+}
+
+// sortOrder returns the content IDs of inv in the order they are saved, each
+// ID once. normalOwnedItemSortIdList holds content IDs, not row numbers.
+func sortOrder(inv []*save.OwnedItems) []int {
+	order := make([]int, 0, len(inv))
+	seen := make(map[int]bool, len(inv))
+	for _, r := range inv {
+		if r.ContentID > 0 && !seen[r.ContentID] {
+			seen[r.ContentID] = true
+			order = append(order, r.ContentID)
+		}
+	}
+	return order
 }
 
 func (i *Inventory) debugToSave(inv []*save.OwnedItems) []*save.OwnedItems {

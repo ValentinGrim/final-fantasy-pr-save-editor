@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	d "github.com/tawesoft/golib/v2/dialog"
 	"pixel-remastered-save-editor/browser"
@@ -21,15 +22,17 @@ func main() {
 	go func() {
 		time.Sleep(1 * time.Second)
 		if hasNewer, version, err := browser.CheckForUpdate(); err == nil && hasNewer {
-			dialog.NewConfirm(
-				"Update Available",
-				fmt.Sprintf("A newer version of the editor is available: %s\nWould you like to download it now?", version), func(ok bool) {
-					if ok {
-						if e := browser.Update(version); e != nil {
-							dialog.NewError(e, gui.Window())
+			fyne.Do(func() {
+				dialog.NewConfirm(
+					"Update Available",
+					fmt.Sprintf("A newer version of the editor is available: %s\nWould you like to download it now?", version), func(ok bool) {
+						if ok {
+							if e := browser.Update(version); e != nil {
+								dialog.NewError(e, gui.Window()).Show()
+							}
 						}
-					}
-				}, gui.Window()).Show()
+					}, gui.Window()).Show()
+			})
 		}
 	}()
 	gui.Run()

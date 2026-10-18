@@ -2,13 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"os"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"pixel-remastered-save-editor/browser"
 	"pixel-remastered-save-editor/global"
@@ -23,6 +22,8 @@ import (
 
 const (
 	appName = "Final Fantasy Pixel Remastered Save Editor"
+	// appID must match the .desktop file name so Wayland compositors find the icon
+	appID = "io.github.valentingrim.ffpr-save-editor"
 )
 
 type (
@@ -60,25 +61,15 @@ var (
 )
 
 func New() Gui {
-	if wd, err := os.Getwd(); err == nil {
-		var dir []os.DirEntry
-		if dir, err = os.ReadDir(wd); err == nil {
-			for _, f := range dir {
-				if !f.IsDir() && strings.HasSuffix(f.Name(), ".ttf") {
-					_ = os.Setenv("FYNE_FONT", f.Name())
-					break
-				}
-			}
-		}
+	a := app.NewWithID(appID)
+	if f := userFont(); f != nil {
+		a.Settings().SetTheme(fontTheme{Theme: theme.DefaultTheme(), font: f})
 	}
-	var (
-		a = app.New()
-		g = &gui{
-			app:    a,
-			window: a.NewWindow(fmt.Sprintf("%s - v%s", appName, browser.Version)),
-			canvas: container.NewStack(),
-		}
-	)
+	g := &gui{
+		app:    a,
+		window: a.NewWindow(fmt.Sprintf("%s - v%s", appName, browser.Version)),
+		canvas: container.NewStack(),
+	}
 	g.window.SetIcon(fyne.NewStaticResource("icon", bundled.ResourceIconPng.StaticContent))
 	g.window.SetContent(g.canvas)
 	g.open = fyne.NewMenuItem("Open", func() {
@@ -251,8 +242,10 @@ func createSupportMenu(w fyne.Window) *fyne.Menu {
 ---
 Written by [Kiame Vivacity](https://github.com/kiamev)
 ### Support Me:
-- [Patreon: https://www.patreon.com/kiamev](https://ko-fi.com/kiamev)
+- [Patreon: https://www.patreon.com/kiamev](https://www.patreon.com/kiamev)
 - [Ko-fi: https://ko-fi.com/kiamev](https://ko-fi.com/kiamev)
+
+Linux port and maintenance by [ValentinGrim](https://github.com/ValentinGrim/final-fantasy-pr-save-editor)
 ---
 ### Contributors:
 - Yosituna for compiling FF I - V game data

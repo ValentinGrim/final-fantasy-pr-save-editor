@@ -138,6 +138,9 @@ func TestSaveSaveBacksUp(t *testing.T) {
 	if len(folders) != 2 {
 		t.Fatalf("backup folders = %v", folders)
 	}
+	if files := listDir(t, filepath.Join(root, "FF2", folders[1])); len(files) != 1 || files[0] != "slot" {
+		t.Fatalf("second backup = %v, the bestiary written by the first save must not be rewritten", files)
+	}
 	assertNoTempFiles(t, dir)
 }
 

@@ -50,6 +50,7 @@ func SaveSave(game global.Game, data *save.Data, slot int, dir string, file stri
 		if err = writeFileAtomic(toFile, bestiary); err != nil {
 			return fmt.Errorf("the save was written but the bestiary was not: failed to write %s: %w", toFile, err)
 		}
+		data.BestiaryWritten()
 	}
 	return
 }

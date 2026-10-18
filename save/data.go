@@ -131,6 +131,12 @@ func (d *Data) BestiaryToSave() (b []byte, prefix []byte, changed bool) {
 	return d.BestiaryDataInternal, d.BestiaryDataTrim, !bytes.Equal(d.BestiaryDataInternal, d.bestiaryLoaded)
 }
 
+// BestiaryWritten records that the current bestiary is now on disk, so later
+// saves don't rewrite (and back up) an unchanged bestiary again.
+func (d *Data) BestiaryWritten() {
+	d.bestiaryLoaded = bytes.Clone(d.BestiaryDataInternal)
+}
+
 // Bestiary returns nil, nil when no bestiary was loaded.
 func (d *Data) Bestiary() (b *Bestiary, err error) {
 	if d.BestiaryDataInternal == nil {

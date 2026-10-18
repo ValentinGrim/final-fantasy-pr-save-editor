@@ -130,7 +130,10 @@ func (g *gui) Load() {
 }
 
 func (g *gui) gameSelected(game global.Game) {
-	g.prev = g.canvas.Objects[0]
+	// keep the open editor set by Load() as the screen to go back to
+	if g.prev == nil {
+		g.prev = g.canvas.Objects[0]
+	}
 	g.canvas.RemoveAll()
 	g.canvas.Add(io.NewFileIO(io.Load, game, g.window, config.Dir(game), func(game global.Game, name, dir, f string, slot int, saveType global.SaveFileType) {
 		defer func() { g.open.Disabled = false }()

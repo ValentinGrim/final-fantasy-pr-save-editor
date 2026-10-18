@@ -42,7 +42,7 @@ func NewLabeledEntry(label string, entry fyne.CanvasObject, columns int) fyne.Ca
 func NewIdCountEntryWithDataWithHint(key *int, value *int, find finder.Find) *IdCountEntry {
 	id := NewIntEntryWithData(key)
 	count := NewIntEntryWithData(value)
-	label := widget.NewLabel("")
+	label := Truncated(widget.NewLabel(""))
 	id.OnChanged = func(s string) {
 		hint(s, label, find)
 	}
@@ -56,7 +56,7 @@ func NewIdCountEntryWithDataWithHint(key *int, value *int, find finder.Find) *Id
 
 func NewIdEntryWithDataWithHint(key *int, find finder.Find) *IdEntry {
 	id := NewIntEntryWithData(key)
-	label := widget.NewLabel("")
+	label := Truncated(widget.NewLabel(""))
 	id.OnChanged = func(s string) {
 		hint(s, label, find)
 	}
@@ -69,7 +69,7 @@ func NewIdEntryWithDataWithHint(key *int, find finder.Find) *IdEntry {
 
 func NewIdEntryWithDataWithHintWithChange(key *int, find finder.Find, onChange func(s string)) *IdEntry {
 	id := NewIntEntryWithData(key)
-	label := widget.NewLabel("")
+	label := Truncated(widget.NewLabel(""))
 	id.OnChanged = func(s string) {
 		hint(s, label, find)
 		onChange(s)

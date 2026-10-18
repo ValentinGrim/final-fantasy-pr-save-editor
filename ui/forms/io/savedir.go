@@ -26,6 +26,20 @@ func gameInfo(game global.Game) (folder, appID string) {
 	}
 }
 
+// initialSaveDir returns dir when it exists and is not the working dir,
+// otherwise the detected save directory of the game, otherwise ".".
+func initialSaveDir(game global.Game, dir string) string {
+	if _, err := os.Stat(dir); err != nil {
+		dir = "."
+	}
+	if dir == "" || dir == "." {
+		if dir = defaultSaveDir(game); dir == "" {
+			dir = "."
+		}
+	}
+	return dir
+}
+
 // defaultSaveDir looks for <Documents>/My Games/<game>/Steam/<SteamID64> and returns "" if nothing is found.
 func defaultSaveDir(game global.Game) string {
 	var (

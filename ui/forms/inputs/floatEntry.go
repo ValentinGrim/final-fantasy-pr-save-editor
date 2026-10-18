@@ -2,7 +2,7 @@ package inputs
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
@@ -11,6 +11,8 @@ import (
 )
 
 type (
+	// FloatEntry accepts digits with an optional leading '-' and one decimal
+	// separator. A typed ',' is shown as '.', a pasted one is read as '.'.
 	FloatEntry struct {
 		widget.Entry
 	}
@@ -43,8 +45,8 @@ func NewFloatEntryWithData(f *float64) *FloatEntry {
 }
 
 func (e *FloatEntry) Float() float64 {
-	f, err := strconv.ParseFloat(e.Text, 64)
-	if err != nil {
+	f, ok := parseFloat(e.Text)
+	if !ok {
 		f = 0
 	}
 	return f
@@ -55,8 +57,11 @@ func (e *FloatEntry) SetFloat(f float64) {
 }
 
 func (e *FloatEntry) TypedRune(r rune) {
-	if (r >= '0' && r <= '9') || r == '.' || r == ',' {
-		e.Entry.TypedRune(r)
+	if r == ',' {
+		r = '.'
+	}
+	if (r >= '0' && r <= '9') || r == '.' || r == '-' {
+		guardInput(&e.Entry, isPartialFloat, func() { e.Entry.TypedRune(r) })
 	}
 }
 
@@ -66,11 +71,14 @@ func (e *FloatEntry) TypedShortcut(shortcut fyne.Shortcut) {
 		e.Entry.TypedShortcut(shortcut)
 		return
 	}
-
-	content := paste.Clipboard.Content()
-	if _, err := strconv.ParseFloat(content, 64); err == nil {
-		e.Entry.TypedShortcut(shortcut)
+	paste = cleanPaste(paste, func(s string) string { return strings.Replace(s, ",", ".", 1) })
+	if paste.Clipboard == nil || !isPartialFloat(paste.Clipboard.Content()) {
+		return
 	}
+	guardInput(&e.Entry, func(s string) bool {
+		_, ok := parseFloat(s)
+		return ok || s == ""
+	}, func() { e.Entry.TypedShortcut(paste) })
 }
 
 func (e *FloatEntry) Keyboard() mobile.KeyboardType {
@@ -88,18 +96,17 @@ func NewFloatEntryBinding(f *float64) FloatEntryBinding {
 	return b
 }
 
+// DataChanged copies the text to the float. Text that is not (yet) a
+// number, like "-", leaves the float as it is.
 func (b FloatEntryBinding) DataChanged() {
-	if s, err := b.s.Get(); err == nil {
-		if s == "" {
-			_ = b.i.Set(0)
-		} else {
-			var f float64
-			if f, err = strconv.ParseFloat(s, 64); err == nil {
-				_ = b.i.Set(f)
-			}
-		}
-	} else {
-
+	s, err := b.s.Get()
+	if err != nil {
+		return
+	}
+	if s == "" {
+		_ = b.i.Set(0)
+	} else if f, ok := parseFloat(s); ok {
+		_ = b.i.Set(f)
 	}
 }
 

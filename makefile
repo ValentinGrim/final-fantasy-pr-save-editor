@@ -70,7 +70,7 @@ WINDOWS_CC ?= gcc
 .DEFAULT_GOAL := build-windows
 else
 # Cross-compiling from Linux. Default goal is the host build only: it needs
-# nothing beyond Go, gcc and the GTK/X11 dev libs, whereas "all" also requires
+# nothing beyond Go, gcc and the OpenGL/X11/Wayland dev libs, whereas "all" also requires
 # mingw-w64, which would make a plain "make" fail on a fresh Linux box.
 WINDOWS_CC ?= x86_64-w64-mingw32-gcc
 .DEFAULT_GOAL := build-linux

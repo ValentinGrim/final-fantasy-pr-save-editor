@@ -11,66 +11,50 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+const abilityID = "Ability ID"
+
 type (
 	Abilities struct {
 		widget.BaseWidget
-		c    *core.Character
-		rows []*row
-		add  *widget.Button
-	}
-	row struct {
-		*inputs.IdEntry
-		remove *widget.Button
+		c         *core.Character
+		abilities *fyne.Container
+		add       *widget.Button
 	}
 )
 
 func NewAbilities(c *core.Character) *Abilities {
 	e := &Abilities{
-		c: c,
+		c:         c,
+		abilities: container.NewVBox(),
 	}
 	e.ExtendBaseWidget(e)
 	e.add = widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
-		e.addAbility()
+		a := &save.Ability{}
+		e.c.AddAbility(a)
+		e.addRow(a)
 	})
-	e.populate()
+	for _, a := range e.c.Abilities {
+		e.addRow(a)
+	}
 	return e
 }
 
-func (e *Abilities) addAbility() {
-	a := &save.Ability{}
-	e.c.AddAbility(a)
-	e.populate()
+func (e *Abilities) addRow(a *save.Ability) {
+	r := inputs.NewIdEntryWithDataWithHint(&a.AbilityID, finder.Abilities)
+	var g fyne.CanvasObject
+	g = inputs.ListRow(r.Label, inputs.Sized(r.ID, inputs.ColumnWidth(abilityID)), widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+		e.c.RemoveAbility(a)
+		e.abilities.Remove(g)
+	}))
+	e.abilities.Add(g)
 }
 
-func (e *Abilities) removeAbility(index int) {
-	e.c.RemoveAbilityIndex(index)
-	e.populate()
-}
-
-func (e *Abilities) populate() {
-	e.rows = make([]*row, len(e.c.Abilities))
-	for i, a := range e.c.Abilities {
-		func(i int, a *save.Ability) {
-			e.rows[i] = &row{
-				IdEntry: inputs.NewIdEntryWithDataWithHint(&a.AbilityID, finder.Abilities),
-				remove: widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
-					e.removeAbility(i)
-				}),
-			}
-		}(i, a)
-	}
-}
-
+// CreateRenderer lists the abilities, the search on the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
-	body := container.NewVBox()
-	for _, r := range e.rows {
-		body.Add(container.NewGridWithColumns(3, r.Label, r.ID, r.remove))
-	}
-	search := inputs.GetSearches().Abilities
+	id, width := inputs.Header(abilityID)
 	left := container.NewBorder(
-		container.NewGridWithColumns(3, container.NewStack(), widget.NewLabel("Ability ID"), e.add),
+		inputs.ListRow(container.NewStack(), inputs.Sized(id, width), e.add),
 		nil, nil, nil,
-		container.NewVScroll(body))
-	right := container.NewGridWithColumns(2, search.Fields(), search.Filter())
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, left, right))
+		container.NewVScroll(e.abilities))
+	return widget.NewSimpleRenderer(inputs.WithSearch(left, inputs.GetSearches().Abilities.Panel()))
 }

@@ -62,34 +62,23 @@ func NewCoreStats(c *core.Character) *Character {
 	return e
 }
 
+// CreateRenderer shows the stats in two forms side by side.
 func (e *Character) CreateRenderer() fyne.WidgetRenderer {
-	l := len(e.left)
-	r := len(e.right)
-	s := l
-	if r > l {
-		s = r
-	}
-	rows := make([]fyne.CanvasObject, 0, s)
-	for i := 0; i < s; i++ {
-		row := container.NewGridWithColumns(4)
-		if i < l {
-			row.Add(e.left[i].Label)
-			row.Add(e.left[i].ID)
-		} else {
-			row.Add(container.NewStack())
-			row.Add(container.NewStack())
+	form := func(entries []*inputs.IdEntry) *fyne.Container {
+		f := inputs.NewForm()
+		for _, i := range entries {
+			f.Add(i.Label)
+			if _, isText := i.ID.(*widget.Entry); isText {
+				f.Add(i.ID)
+			} else {
+				f.Add(inputs.Fixed(i.ID, inputs.EntryWidth))
+			}
 		}
-		if i < r {
-			row.Add(e.right[i].Label)
-			row.Add(e.right[i].ID)
-		} else {
-			row.Add(container.NewStack())
-			row.Add(container.NewStack())
-		}
-		rows = append(rows, container.NewPadded(row))
+		return f
 	}
 	return widget.NewSimpleRenderer(
 		container.NewBorder(
 			widget.NewCheckWithData("Is Available", e.isEnabled),
-			nil, container.NewVScroll(container.NewVBox(rows...)), nil))
+			nil, nil, nil,
+			container.NewVScroll(container.NewGridWithColumns(2, form(e.left), form(e.right)))))
 }

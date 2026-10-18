@@ -1,6 +1,7 @@
 package editors
 
 import (
+	"math"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -51,12 +52,13 @@ func (e *Transportation) createTabItem(game global.Game, transport *save.OwnedTr
 		}
 	}
 	in := inputs.NewIdEntryWithDataWithHint(&transport.MapID, finder.Maps)
-	c := container.NewVBox(
-		container.NewGridWithColumns(3, widget.NewLabel("Map ID"), in.ID, in.Label),
-		inputs.NewLabeledEntry("Position X", inputs.NewFloatEntryWithData(&p.X), 3),
-		inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&p.Y), 3),
-		inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&p.Z), 3),
-		inputs.NewLabeledEntry("Facing", inputs.NewIntEntryWithData(&transport.Direction), 3),
-		inputs.NewLabeledEntry("Time Stamp Ticks", inputs.NewIntEntryWithData(&transport.TimeStampTicks), 3))
-	return container.NewTabItem(name, container.NewBorder(nil, nil, c, nil)), true
+	// The time stamp ticks are a C# long, not an int.
+	c := inputs.NewForm(
+		widget.NewLabel("Map ID"), inputs.IDValue(in.ID, in.Label),
+		widget.NewLabel("Position X"), inputs.Fixed(inputs.NewFloatEntryWithData(&p.X), inputs.FloatWidth),
+		widget.NewLabel("Position Y"), inputs.Fixed(inputs.NewFloatEntryWithData(&p.Y), inputs.FloatWidth),
+		widget.NewLabel("Position Z"), inputs.Fixed(inputs.NewFloatEntryWithData(&p.Z), inputs.FloatWidth),
+		widget.NewLabel("Facing"), inputs.Fixed(inputs.NewIntEntryWithData(&transport.Direction), inputs.EntryWidth),
+		widget.NewLabel("Time Stamp Ticks"), inputs.Fixed(inputs.NewIntEntryWithDataRange(&transport.TimeStampTicks, math.MinInt, math.MaxInt), inputs.WideWidth))
+	return container.NewTabItem(name, container.NewBorder(c, nil, nil, nil)), true
 }

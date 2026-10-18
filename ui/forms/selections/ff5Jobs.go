@@ -11,6 +11,11 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+const (
+	jobLevel       = "Level"
+	jobProficiency = "Proficiency"
+)
+
 type (
 	FF5Job struct {
 		widget.BaseWidget
@@ -49,29 +54,37 @@ func NewFF5Jobs(c *core.Character) *FF5Job {
 	return e
 }
 
+// CreateRenderer lists the jobs, the job search on the right.
 func (e *FF5Job) CreateRenderer() fyne.WidgetRenderer {
+	lvl, lvlWidth := inputs.Header(jobLevel)
+	prof, profWidth := inputs.Header(jobProficiency)
+	// Leave room for the Remove buttons of the rows.
+	remove := newRemoveButton(nil).MinSize().Width
 	body := container.NewBorder(
-		container.NewGridWithColumns(4,
-			widget.NewLabel("Job"),
-			widget.NewLabel("Level"),
-			widget.NewLabel("Proficiency")),
+		inputs.ListRow(widget.NewLabel("Job"), inputs.Sized(lvl, lvlWidth), inputs.Sized(prof, profWidth), inputs.Sized(container.NewStack(), remove)),
 		nil, nil, nil, container.NewVScroll(e.body))
 	return widget.NewSimpleRenderer(container.NewBorder(
 		container.NewHBox(e.add),
-		nil, body, inputs.GetSearches().Jobs.Fields()))
+		nil, nil, nil,
+		inputs.WithSearch(body, inputs.GetSearches().Jobs.Panel())))
 }
 
 func (e *FF5Job) addRow(name string, job *save.Job) {
-	var g *fyne.Container
-	g = container.NewGridWithColumns(4,
-		widget.NewLabel(name),
-		inputs.NewIntEntryWithData(&job.Level),
-		inputs.NewIntEntryWithData(&job.CurrentProficiency),
-		widget.NewButtonWithIcon("Remove", theme.DeleteIcon(), func() {
+	var g fyne.CanvasObject
+	g = inputs.ListRow(widget.NewLabel(name),
+		inputs.Sized(inputs.NewIntEntryWithData(&job.Level), inputs.ColumnWidth(jobLevel)),
+		inputs.Sized(inputs.NewIntEntryWithData(&job.CurrentProficiency), inputs.ColumnWidth(jobProficiency)),
+		newRemoveButton(func() {
 			e.removeJob(job.ID)
 			e.body.Remove(g)
 		}))
 	e.body.Add(g)
+}
+
+// newRemoveButton shows only an icon, like the other lists, to leave room for
+// the job names.
+func newRemoveButton(tapped func()) *widget.Button {
+	return widget.NewButtonWithIcon("", theme.DeleteIcon(), tapped)
 }
 
 func (e *FF5Job) addJob(s string) {

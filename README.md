@@ -1,11 +1,12 @@
-# Final Fantasy VI Save Editor
+# Final Fantasy Pixel Remaster Save Editor
 
-Supports editing `Final Fantasy VI Pixel Remastered` Save files.
-- Character Stats, Magic, Abilities, Equipment, Commands, and Jobs
-- Inventory and Important items
-- Change Party members
-- Map data including player world/map/position/facing, Black Jack world/position/facing, and Falcon world/position/facing.
-- Bestiary and ability to mark every mob as being defeated
+Edits save files of `Final Fantasy I` to `VI Pixel Remaster`, on Windows and Linux (Steam saves, and PlayStation `slotN.sav` files).
+- Character stats, magic, abilities, equipment, commands and jobs
+- Inventory and important items
+- Party members
+- Map data: player world/map/position/facing, and vehicles such as the Blackjack and the Falcon in FF VI
+- Espers (FF VI)
+- Bestiary, with an option to mark every monster as defeated
 
 ### Non-Latin text (Japanese, Chinese, Korean, ...)
 The editor uses your system fonts for any character its built-in font lacks, so names in other scripts normally display without any setup. This works out of the box on Windows, and on Linux when a suitable font is installed (e.g. `noto-fonts-cjk` on Arch, `fonts-noto-cjk` on Debian/Ubuntu).
@@ -38,17 +39,23 @@ The editor tries to detect these folders automatically; if it can't find yours, 
 
 The configuration file is stored in `~/.config/ffpr-save-editor/` on Linux and in `%AppData%\ffpr-save-editor\` on Windows. If a `prSaveEditor.config` already sits next to the executable, that one is used instead (portable mode).
 
+### Backups
+
+Each time the editor overwrites a save, the files it replaces (the slot, and the bestiary when it changed) are first copied to a `backups` folder next to the configuration file: `~/.config/ffpr-save-editor/backups/` on Linux, `%AppData%\ffpr-save-editor\backups\` on Windows, or next to the executable in portable mode. There is one subfolder per game (`FF1` to `FF6`) and one dated folder per save; the 20 most recent are kept for each game.
+
+To put one back, use `File > Restore backup…`, pick the game and the backup, check the directory to restore to, and press `Restore`. Close the game first, as it may overwrite the restored files. The files about to be replaced are backed up too, so a restore can itself be undone the same way.
+
 ## Building
 
 ### Requirements
 - Go 1.23 or newer
 - A C compiler (the GUI uses cgo)
-- On Linux, the OpenGL, X11, Wayland and GTK3 development libraries:
-  - Arch: `sudo pacman -S go gcc pkgconf gtk3 libxcursor libxrandr libxinerama libxi libxxf86vm mesa wayland libxkbcommon`
+- On Linux, the OpenGL, X11 and Wayland development libraries:
+  - Arch: `sudo pacman -S go gcc pkgconf libxcursor libxrandr libxinerama libxi libxxf86vm mesa wayland libxkbcommon`
     - plus `mingw-w64-gcc` to cross-compile the Windows build, and optionally `upx`
-  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libgtk-3-dev libwayland-dev libxkbcommon-dev`
+  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libwayland-dev libxkbcommon-dev`
     - plus `gcc-mingw-w64-x86-64` to cross-compile the Windows build, and optionally `upx`
-  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel gtk3-devel wayland-devel libxkbcommon-devel`
+  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel wayland-devel libxkbcommon-devel`
     - plus `mingw64-gcc` to cross-compile the Windows build, and optionally `upx`
 
 ### Commands

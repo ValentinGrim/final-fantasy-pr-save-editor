@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -19,9 +20,12 @@ func main() {
 	}()
 	gui := ui.New()
 	gui.Load()
+	var quit atomic.Bool
 	go func() {
+		// the update check is best effort: never let it take the app down
+		defer func() { _ = recover() }()
 		time.Sleep(1 * time.Second)
-		if hasNewer, version, err := browser.CheckForUpdate(); err == nil && hasNewer {
+		if hasNewer, version, err := browser.CheckForUpdate(); err == nil && hasNewer && !quit.Load() {
 			fyne.Do(func() {
 				dialog.NewConfirm(
 					"Update Available",
@@ -35,6 +39,8 @@ func main() {
 			})
 		}
 	}()
+	// Run returns once the driver has quit (window closed, File > Quit,
+	// SIGINT/SIGTERM); GLFW is terminated by then, so don't call Quit again.
 	gui.Run()
-	gui.App().Quit()
+	quit.Store(true)
 }

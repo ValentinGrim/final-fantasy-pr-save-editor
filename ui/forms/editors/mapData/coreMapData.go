@@ -16,9 +16,9 @@ import (
 type (
 	MapData struct {
 		widget.BaseWidget
-		player       []fyne.CanvasObject
-		gps          []fyne.CanvasObject
-		misc         []fyne.CanvasObject
+		player       *fyne.Container
+		gps          *fyne.Container
+		misc         *fyne.Container
 		otherParties *fyne.Container
 	}
 )
@@ -27,75 +27,78 @@ func NewCore(data *core.MapData) *MapData {
 	gpsMapID := inputs.NewIdEntryWithDataWithHint(&data.Gps.MapID, finder.Maps)
 	miscMapID := inputs.NewIdEntryWithDataWithHint(&data.Map.MapID, finder.Maps)
 	e := &MapData{
-		player: []fyne.CanvasObject{
-			inputs.NewLabeledEntry("Position X", inputs.NewFloatEntryWithData(&data.Player.Position.X), 3),
-			inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&data.Player.Position.Y), 3),
-			inputs.NewLabeledEntry("Position Z", inputs.NewFloatEntryWithData(&data.Player.Position.Z), 3),
-			inputs.NewLabeledEntry("Facing Direction", inputs.NewIntEntryWithData(&data.Player.Direction), 3),
-		},
-		gps: []fyne.CanvasObject{
-			container.NewGridWithColumns(3, widget.NewLabel("Map ID"), gpsMapID.ID, gpsMapID.Label),
-			inputs.NewLabeledEntry("Area ID", inputs.NewIntEntryWithData(&data.Gps.AreaID), 3),
-			inputs.NewLabeledEntry("ID", inputs.NewIntEntryWithData(&data.Gps.GpsID), 3),
-			inputs.NewLabeledEntry("Width", inputs.NewIntEntryWithData(&data.Gps.Width), 3),
-			inputs.NewLabeledEntry("Height", inputs.NewIntEntryWithData(&data.Gps.Height), 3),
-		},
-		misc: []fyne.CanvasObject{
-			container.NewGridWithColumns(3, widget.NewLabel("Map ID"), miscMapID.ID, miscMapID.Label),
-			inputs.NewLabeledEntry("Point In", inputs.NewIntEntryWithData(&data.Map.PointIn), 3),
-			inputs.NewLabeledEntry("Transportation ID", inputs.NewIntEntryWithData(&data.Map.TransportationID), 3),
-			inputs.NewLabeledEntry("Carrying Hover Ship", widget.NewCheckWithData("", binding.BindBool(&data.Map.CarryingHoverShip)), 3),
-		},
+		player: inputs.NewForm(
+			widget.NewLabel("Position X"), inputs.Fixed(inputs.NewFloatEntryWithData(&data.Player.Position.X), inputs.FloatWidth),
+			widget.NewLabel("Position Y"), inputs.Fixed(inputs.NewFloatEntryWithData(&data.Player.Position.Y), inputs.FloatWidth),
+			widget.NewLabel("Position Z"), inputs.Fixed(inputs.NewFloatEntryWithData(&data.Player.Position.Z), inputs.FloatWidth),
+			widget.NewLabel("Facing Direction"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Player.Direction), inputs.EntryWidth),
+		),
+		gps: inputs.NewForm(
+			widget.NewLabel("Map ID"), inputs.IDValue(gpsMapID.ID, gpsMapID.Label),
+			widget.NewLabel("Area ID"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Gps.AreaID), inputs.EntryWidth),
+			widget.NewLabel("ID"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Gps.GpsID), inputs.EntryWidth),
+			widget.NewLabel("Width"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Gps.Width), inputs.EntryWidth),
+			widget.NewLabel("Height"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Gps.Height), inputs.EntryWidth),
+		),
+		misc: inputs.NewForm(
+			widget.NewLabel("Map ID"), inputs.IDValue(miscMapID.ID, miscMapID.Label),
+			widget.NewLabel("Point In"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Map.PointIn), inputs.EntryWidth),
+			widget.NewLabel("Transportation ID"), inputs.Fixed(inputs.NewIntEntryWithData(&data.Map.TransportationID), inputs.EntryWidth),
+			widget.NewLabel("Carrying Hover Ship"), widget.NewCheckWithData("", binding.BindBool(&data.Map.CarryingHoverShip)),
+		),
 		otherParties: container.NewVBox(),
 	}
 	e.ExtendBaseWidget(e)
+	forms := []*fyne.Container{e.player, e.gps, e.misc}
 	if data.OtherParties != nil {
 		if parties := *data.OtherParties; len(parties) > 0 && parties[0].PlayableCharacterCorpsId > -1 {
 			for i, party := range parties {
 				if p, loaded := e.loadParty(party); loaded {
 					e.otherParties.Add(widget.NewLabel("Party " + strconv.Itoa(i+1)))
 					mapID := inputs.NewIdEntryWithDataWithHint(&p.MapID, finder.Maps)
-					c := container.NewVBox(
-						container.NewGridWithColumns(3, widget.NewLabel("Map ID"), mapID.ID, mapID.Label),
-						inputs.NewLabeledEntry("Point In", inputs.NewIntEntryWithData(&p.PointIn), 3))
+					c := inputs.NewForm(
+						widget.NewLabel("Map ID"), inputs.IDValue(mapID.ID, mapID.Label),
+						widget.NewLabel("Point In"), inputs.Fixed(inputs.NewIntEntryWithData(&p.PointIn), inputs.EntryWidth))
 					if p.PE != nil {
-						c.Add(inputs.NewLabeledEntry("Position X", inputs.NewFloatEntryWithData(&p.PE.Position.X), 3))
-						c.Add(inputs.NewLabeledEntry("Position Y", inputs.NewFloatEntryWithData(&p.PE.Position.Y), 3))
-						c.Add(inputs.NewLabeledEntry("Position Z", inputs.NewFloatEntryWithData(&p.PE.Position.Z), 3))
+						c.Add(widget.NewLabel("Position X"))
+						c.Add(inputs.Fixed(inputs.NewFloatEntryWithData(&p.PE.Position.X), inputs.FloatWidth))
+						c.Add(widget.NewLabel("Position Y"))
+						c.Add(inputs.Fixed(inputs.NewFloatEntryWithData(&p.PE.Position.Y), inputs.FloatWidth))
+						c.Add(widget.NewLabel("Position Z"))
+						c.Add(inputs.Fixed(inputs.NewFloatEntryWithData(&p.PE.Position.Z), inputs.FloatWidth))
 					}
 					e.otherParties.Add(container.NewPadded(c))
+					forms = append(forms, c)
 				}
 			}
 		}
 	}
+	inputs.AlignForms(forms...)
 	return e
 }
 
+// CreateRenderer stacks the sections, the other parties (FF6) last, in one
+// column so the editor fits next to the map search.
 func (e *MapData) CreateRenderer() fyne.WidgetRenderer {
-	search := inputs.GetSearches().Maps
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil,
-		container.NewGridWithColumns(2,
-			container.NewVScroll(container.NewVBox(
-				widget.NewLabel("Player"),
-				container.NewPadded(container.NewVBox(e.player...)),
-				widget.NewLabel("GPS"),
-				container.NewPadded(container.NewVBox(e.gps...)),
-				widget.NewLabel("Misc"),
-				container.NewPadded(container.NewVBox(e.misc...)))),
-			container.NewVScroll(e.otherParties),
-		),
-		container.NewGridWithColumns(2, search.Fields(), search.Filter())))
+	return widget.NewSimpleRenderer(inputs.WithSearch(
+		container.NewVScroll(container.NewVBox(
+			widget.NewLabel("Player"),
+			container.NewPadded(e.player),
+			widget.NewLabel("GPS"),
+			container.NewPadded(e.gps),
+			widget.NewLabel("Misc"),
+			container.NewPadded(e.misc),
+			e.otherParties)),
+		inputs.GetSearches().Maps.Panel()))
 }
 
+// loadParty decodes the player entity of party into party.PE, so the
+// editor edits the party itself; MapData.ToSave encodes PE again.
 func (e *MapData) loadParty(party *save.OtherPartyData) (p *save.OtherPartyData, loaded bool) {
 	pe, err := party.PlayerEntity()
 	if err == nil {
-		p = &save.OtherPartyData{
-			MapID:                    party.MapID,
-			PointIn:                  party.PointIn,
-			PE:                       pe,
-			PlayableCharacterCorpsId: party.PlayableCharacterCorpsId,
-		}
+		party.PE = pe
+		p = party
 		loaded = true
 	}
 	return

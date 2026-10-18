@@ -1,23 +1,20 @@
 package file
 
 import (
-	"bytes"
-	"compress/flate"
-	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/kiamev/ffpr-save-cypher/rijndael"
 	oj "github.com/virtuald/go-ordered-json"
 	"pixel-remastered-save-editor/global"
 	"pixel-remastered-save-editor/save"
 	"pixel-remastered-save-editor/save/config"
 )
 
+// bestiaryFile holds the bestiary shared by every slot of a save directory.
 const bestiaryFile = "dp3fS2vqP7GDj8eF72YKqbT7FIAF=e7Shy2CsTITm2E="
 
 func LoadSave(game global.Game, dir string, fileName string, saveType global.SaveFileType) (data *save.Data, err error) {
@@ -26,58 +23,41 @@ func LoadSave(game global.Game, dir string, fileName string, saveType global.Sav
 	if b, data.Trimmed, err = loadFile(game, filepath.Join(dir, fileName), saveType, "save"); err != nil {
 		return
 	}
-	err = oj.Unmarshal(b, data)
-	// var t []byte
-	// if b, t, err = loadFile(game, filepath.Join(dir, bestiaryFile), saveType, "bestiary"); err == nil {
-	// 	data.BestiaryDataTrim = &t
-	// 	data.BestiaryDataInternal = &b
-	// }
+	if err = oj.Unmarshal(b, data); err != nil {
+		return
+	}
+	loadBestiary(game, dir, saveType, data)
 	return
 }
 
+// loadBestiary is best effort: if the bestiary file is missing or unreadable
+// the slot still loads, the bestiary is not editable and SaveSave leaves the
+// file alone.
+func loadBestiary(game global.Game, dir string, saveType global.SaveFileType, data *save.Data) {
+	b, prefix, err := loadFile(game, filepath.Join(dir, bestiaryFile), saveType, "bestiary")
+	if err == nil && !json.Valid(b) {
+		err = errors.New("not valid JSON")
+	}
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Printf("bestiary not loaded: %v", err)
+		}
+		return
+	}
+	data.SetLoadedBestiary(b, prefix)
+}
+
 func loadFile(game global.Game, fromFile string, saveType global.SaveFileType, name string) (out []byte, trimmed []byte, err error) {
-	var (
-		b []byte
-	)
+	var b []byte
 	if b, err = os.ReadFile(fromFile); err != nil {
 		return
 	}
 	if saveType == global.PS {
 		return b, nil, nil
 	}
-	if len(b) < 10 {
-		err = errors.New("unable to load file")
-		return
+	if out, trimmed, err = decode(b); err != nil {
+		return nil, nil, fmt.Errorf("unable to load %s: %w", filepath.Base(fromFile), err)
 	}
-	// Format
-	if b[0] == 239 && b[1] == 187 && b[2] == 191 {
-		trimmed = []byte{239, 187, 191}
-		b = b[3:]
-	}
-	for len(b)%4 != 0 {
-		b = append(b, '=')
-	}
-	// Decode
-	b, _ = base64.StdEncoding.DecodeString(string(b))
-	if len(b) == 0 {
-		err = errors.New("unable to load file")
-		return
-	}
-	// Decrypt
-	if b, err = rijndael.New().Decrypt(b); err != nil {
-		return
-	}
-
-	// Flate
-	println(fmt.Sprintf("%d", b[len(b)-1]))
-	zr := flate.NewReader(bytes.NewReader(b))
-	defer func() { _ = zr.Close() }()
-	out, err = io.ReadAll(zr)
-	if name == "bestiary" && strings.Contains(strings.ToLower(err.Error()), "eof") {
-		err = nil
-	}
-	if err == nil {
-		printFile(filepath.Join(config.Dir(game), "_"+name+"_loaded.json"), out)
-	}
+	printFile(filepath.Join(config.Dir(game), "_"+name+"_loaded.json"), out)
 	return
 }

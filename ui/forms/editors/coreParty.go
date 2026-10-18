@@ -31,8 +31,7 @@ func NewCoreParty(p *core.Party, parties *core.Parties) *Party {
 	for _, m := range p.Members {
 		func(m *save.CorpsSlotInfo) {
 			j := inputs.NewIdEntryWithDataWithHint(&m.CharacterID, finder.Characters)
-			e.current.Add(container.NewPadded(
-				container.NewGridWithColumns(3, j.Label, j.ID)))
+			e.current.Add(container.NewPadded(inputs.ListRow(j.Label, inputs.Sized(j.ID, inputs.EntryWidth))))
 		}(m)
 	}
 	for i, j := range parties.Parties {
@@ -42,17 +41,16 @@ func NewCoreParty(p *core.Party, parties *core.Parties) *Party {
 		e.parties.Add(widget.NewLabel(fmt.Sprintf("Party %d", i+1)))
 		for _, m := range j {
 			in := inputs.NewIdEntryWithDataWithHint(&m.CharacterID, finder.Characters)
-			e.parties.Add(container.NewPadded(
-				container.NewGridWithColumns(3, in.Label, in.ID)))
+			e.parties.Add(container.NewPadded(inputs.ListRow(in.Label, inputs.Sized(in.ID, inputs.EntryWidth))))
 		}
 	}
 	return e
 }
 
+// CreateRenderer shows the current party above the other parties, the
+// character search on the right.
 func (e *Party) CreateRenderer() fyne.WidgetRenderer {
-	search := inputs.GetSearches().Characters
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil,
-		container.NewVScroll(container.NewGridWithColumns(2,
-			e.current,
-			container.NewVScroll(e.parties))), search.Fields()))
+	return widget.NewSimpleRenderer(inputs.WithSearch(
+		container.NewVScroll(container.NewVBox(e.current, widget.NewSeparator(), e.parties)),
+		inputs.GetSearches().Characters.Panel()))
 }

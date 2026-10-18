@@ -45,16 +45,20 @@ func (e *Commands) DataChanged() {
 	}
 }
 
+// CreateRenderer shows a form of the commands, the search on the right.
 func (e *Commands) CreateRenderer() fyne.WidgetRenderer {
-	rows := container.NewVBox()
-	for _, i := range e.inputs {
-		rows.Add(container.NewGridWithColumns(3, i.Label, i.ID))
+	rows := inputs.NewForm()
+	for i, in := range e.inputs {
+		label := ""
+		if i == 0 {
+			label = "Commands:"
+		}
+		rows.Add(widget.NewLabel(label))
+		rows.Add(inputs.IDValue(in.ID, in.Label))
 	}
-	cmdSearch := inputs.GetSearches().Commands
 	top := container.NewVBox(
 		widget.NewLabel("can cause soft locks when loading save"),
 		widget.NewCheckWithData("Enabled", e.enabled))
-	left := container.NewVScroll(rows)
-	right := container.NewGridWithColumns(2, cmdSearch.Fields(), cmdSearch.Filter())
-	return widget.NewSimpleRenderer(container.NewBorder(top, nil, left, right))
+	return widget.NewSimpleRenderer(container.NewBorder(top, nil, nil, nil,
+		inputs.WithSearch(container.NewVScroll(rows), inputs.GetSearches().Commands.Panel())))
 }

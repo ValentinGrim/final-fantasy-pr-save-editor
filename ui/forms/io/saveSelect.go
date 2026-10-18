@@ -9,7 +9,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
-	"github.com/sqweek/dialog"
 	"pixel-remastered-save-editor/global"
 	"pixel-remastered-save-editor/save/config"
 )
@@ -47,14 +46,7 @@ const (
 )
 
 func NewFileIO(kind Kind, game global.Game, window fyne.Window, dir string, onSelected OnSelect, onCancel func()) *saveSelect {
-	if _, err := os.Stat(dir); err != nil {
-		dir = "."
-	}
-	if dir == "" || dir == "." {
-		if dir = defaultSaveDir(game); dir == "" {
-			dir = "."
-		}
-	}
+	dir = initialSaveDir(game, dir)
 	w := &saveSelect{
 		kind:       kind,
 		game:       game,
@@ -68,7 +60,9 @@ func NewFileIO(kind Kind, game global.Game, window fyne.Window, dir string, onSe
 	w.dir.AddListener(w)
 	w.saveType = widget.NewSelect([]string{"PC", "Playstation"}, func(s string) {
 		config.SetEnablePlayStation(s == "Playstation")
-		// w.DataChanged()
+		// The buttons hold the save type and the file name, rebuild them for the new type. This also runs from
+		// SetSelected below, before NewFileIO returns, which is fine as w.dir and w.buttons are already set.
+		w.DataChanged()
 	})
 	if config.EnablePlayStation() {
 		w.saveType.SetSelected("Playstation")
@@ -88,6 +82,8 @@ func (w *saveSelect) DataChanged() {
 		found    bool
 		saveType = global.PC
 	)
+	// Always drop the old buttons: they hold the previous directory and save type.
+	w.buttons.RemoveAll()
 	if err != nil {
 		return
 	}
@@ -95,18 +91,18 @@ func (w *saveSelect) DataChanged() {
 		saveType = global.PS
 	}
 
-	if d, err = os.ReadDir(dir); err == nil {
-		for _, f := range d {
-			if !f.IsDir() {
-				if fi, err = f.Info(); err == nil {
-					m[f.Name()] = fi
-				}
+	if d, err = os.ReadDir(dir); err != nil {
+		return
+	}
+	for _, f := range d {
+		if !f.IsDir() {
+			if fi, err = f.Info(); err == nil {
+				m[f.Name()] = fi
 			}
 		}
 	}
-	if len(m) > 0 {
+	if len(m) > 0 || w.kind == Save {
 		var key string
-		w.buttons.RemoveAll()
 		for _, save := range saves {
 			if saveType == global.PS {
 				key = fmt.Sprintf("slot%d.sav", save.Slot)
@@ -132,9 +128,10 @@ func (w *saveSelect) CreateRenderer() fyne.WidgetRenderer {
 	top := container.NewBorder(nil, nil,
 		widget.NewLabel("Directory:"),
 		widget.NewButton("Change", func() {
-			if dir, err := dialog.Directory().Title("Select save directory").Browse(); err == nil && dir != "" {
+			current, _ := w.dir.Get()
+			pickDirectory(w.window, "Select save directory", current, func(dir string) {
 				_ = w.dir.Set(dir)
-			}
+			})
 		}),
 		widget.NewEntryWithData(w.dir))
 	top = container.NewBorder(top, nil, widget.NewLabel("Save Type:"), nil, w.saveType)

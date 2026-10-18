@@ -278,7 +278,9 @@ func (d *OwnedCharacter) SetAbilitySlotData(v []*AbilitySlotData) (err error) {
 		}
 	}
 	l := &AbilitySlotDataList{}
-	l.Target, err = MarshalMany(v)
+	if l.Target, err = MarshalMany(v); err != nil {
+		return
+	}
 	d.AbilitySlotDataListInternal, err = MarshalOne[AbilitySlotDataList](l)
 	return
 }

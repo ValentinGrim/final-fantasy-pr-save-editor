@@ -52,18 +52,23 @@ func (e *Commands) DataChanged() {
 	}
 }
 
+// CreateRenderer shows a form of the job and the commands, the searches on the
+// right.
 func (e *Commands) CreateRenderer() fyne.WidgetRenderer {
-	rows := container.NewVBox()
-	rows.Add(container.NewGridWithColumns(3, widget.NewLabel("Job:"), e.job.ID, e.job.Label))
-	for _, i := range e.inputs {
-		rows.Add(container.NewGridWithColumns(3, i.Label, i.ID))
+	rows := inputs.NewForm(widget.NewLabel("Job:"), inputs.IDValue(e.job.ID, e.job.Label))
+	for i, in := range e.inputs {
+		label := ""
+		if i == 0 {
+			label = "Commands:"
+		}
+		rows.Add(widget.NewLabel(label))
+		rows.Add(inputs.IDValue(in.ID, in.Label))
 	}
-	cmdSearch := inputs.GetSearches().Commands
-	jobSearch := inputs.GetSearches().Jobs
 	top := container.NewVBox(
 		widget.NewLabel("can cause soft locks when loading save"),
 		widget.NewCheckWithData("Enabled", e.enabled))
-	left := container.NewVScroll(rows)
-	right := container.NewGridWithColumns(4, cmdSearch.Fields(), cmdSearch.Filter(), jobSearch.Fields(), jobSearch.Filter())
-	return widget.NewSimpleRenderer(container.NewBorder(top, nil, left, right))
+	return widget.NewSimpleRenderer(container.NewBorder(top, nil, nil, nil,
+		inputs.WithSearch(container.NewVScroll(rows), inputs.SearchPanels(
+			inputs.NamedSearch{Name: "Commands", Search: inputs.GetSearches().Commands},
+			inputs.NamedSearch{Name: "Jobs", Search: inputs.GetSearches().Jobs}))))
 }

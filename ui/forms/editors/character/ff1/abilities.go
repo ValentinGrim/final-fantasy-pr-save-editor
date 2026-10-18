@@ -32,7 +32,9 @@ func NewAbilities(c *core.Character) *Abilities {
 	e.ExtendBaseWidget(e)
 
 	e.add = widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
-		e.addRow(&save.Ability{})
+		a := &save.Ability{}
+		e.c.AddAbility(a)
+		e.addRow(a)
 	})
 
 	for i, asd := range e.c.AbilitySlotData {

@@ -48,6 +48,9 @@ func NewAbilities(c *core.Character) *Abilities {
 	return e
 }
 
+// createMagics binds one entry per spell. A spell the character does not have
+// yet gets a skill level 0 entry; GetAbility finds it the next time the
+// character is selected, so it is created only once.
 func (e *Abilities) createMagics() {
 	for i, m := range ff6.MagicSorted {
 		a, ok := e.c.GetAbility(m.Value)
@@ -61,14 +64,16 @@ func (e *Abilities) createMagics() {
 
 func (e *Abilities) createAbilities(a []models.NameValue) {
 	for _, i := range a {
-		var c *check
-		c = &check{
-			Check: widget.NewCheck(i.Name, func(checked bool) {
-				e.toggleAbility(c, checked)
-			}),
-			id: i.Value,
+		c := &check{
+			Check: widget.NewCheck(i.Name, nil),
+			id:    i.Value,
 		}
-		c.SetChecked(e.knows(i.Value))
+		// Set the initial state before OnChanged so building the editor does
+		// not modify the character.
+		c.Checked = e.knows(i.Value)
+		c.OnChanged = func(checked bool) {
+			e.setAbility(c.id, checked)
+		}
 		e.abilities = append(e.abilities, c)
 	}
 }
@@ -126,33 +131,28 @@ func (e *Abilities) toggleAllMagic(max bool) {
 
 func (e *Abilities) toggleAllAbilities(checked bool) {
 	for _, i := range e.abilities {
-		e.toggleAbility(i, checked)
+		e.setAbility(i.id, checked)
+		// Update the box without SetChecked: it would call OnChanged and
+		// apply the change a second time.
+		i.Checked = checked
+		i.Refresh()
 	}
 }
 
-func (e *Abilities) toggleAbility(c *check, checked bool) {
-	c.SetChecked(checked)
-	ab, ok := e.c.GetAbility(c.id)
+// setAbility marks the ability as learned (skill level 100) or not (0).
+func (e *Abilities) setAbility(id int, checked bool) {
+	lvl := 0
 	if checked {
-		if !ok {
-			e.c.AddAbility(&save.Ability{
-				AbilityID:  c.id,
-				ContentID:  c.id + 330,
-				SkillLevel: 100,
-			})
-		} else {
-			ab.SkillLevel = 100
-		}
+		lvl = 100
+	}
+	if ab, ok := e.c.GetAbility(id); ok {
+		ab.SkillLevel = lvl
 	} else {
-		if !ok {
-			e.c.AddAbility(&save.Ability{
-				AbilityID:  c.id,
-				ContentID:  c.id + 330,
-				SkillLevel: 0,
-			})
-		} else {
-			ab.SkillLevel = 0
-		}
+		e.c.AddAbility(&save.Ability{
+			AbilityID:  id,
+			ContentID:  id + 330,
+			SkillLevel: lvl,
+		})
 	}
 }
 

@@ -14,7 +14,6 @@ type (
 		Commands           []int
 		Abilities          []*save.Ability
 		AbilitySlotData    []*save.AbilitySlotData
-		abilitiesLookup    map[int]*save.Ability
 		Jobs               []*save.Job
 		Equipment          *save.EquipmentList
 		AdditionAbilityIds []int
@@ -46,10 +45,7 @@ func NewCharacters(game global.Game, in *save.OwnedCharacterList) (c *Characters
 }
 
 func NewCharacter(game global.Game, in *save.OwnedCharacter) (c *Character, err error) {
-	c = &Character{
-		Base:            in,
-		abilitiesLookup: make(map[int]*save.Ability),
-	}
+	c = &Character{Base: in}
 
 	if c.Parameters, err = in.CharacterParameters(); err != nil {
 		return
@@ -83,9 +79,6 @@ func NewCharacter(game global.Game, in *save.OwnedCharacter) (c *Character, err 
 	}
 	if c.Jobs, err = in.Jobs(); err != nil {
 		return
-	}
-	for _, ability := range c.Abilities {
-		c.abilitiesLookup[ability.AbilityID] = ability
 	}
 	return
 }
@@ -123,31 +116,59 @@ func (c *Characters) GetByName(name string) (character *Character, found bool) {
 	return nil, false
 }
 
+// Abilities are looked up by scanning c.Abilities rather than through a cached
+// map: the editors bind entries directly to Ability.AbilityID, so an ID can
+// change after the ability was added, and the save code appends to
+// c.Abilities directly. A scan always reflects the current state.
+
+// AddAbility appends ability unless it, or another ability with the same
+// non-zero ID, is already present. Abilities with ID 0 are placeholders for
+// rows the user has not filled in yet; several may coexist and none is saved.
 func (c *Character) AddAbility(ability *save.Ability) {
-	if _, ok := c.abilitiesLookup[ability.AbilityID]; !ok {
-		c.Abilities = append(c.Abilities, ability)
+	if ability == nil {
+		return
 	}
+	for _, a := range c.Abilities {
+		if a == ability || (ability.AbilityID != 0 && a.AbilityID == ability.AbilityID) {
+			return
+		}
+	}
+	c.Abilities = append(c.Abilities, ability)
 }
 
+// RemoveAbility removes ability itself if present, otherwise the first
+// ability sharing its non-zero ID.
 func (c *Character) RemoveAbility(ability *save.Ability) {
-	for i, a := range c.Abilities {
-		if a.AbilityID == ability.AbilityID {
-			c.RemoveAbilityIndex(i)
-			break
-		}
+	if ability == nil {
+		return
+	}
+	if i := slices.Index(c.Abilities, ability); i >= 0 {
+		c.RemoveAbilityIndex(i)
+		return
+	}
+	if ability.AbilityID == 0 {
+		return
+	}
+	if i := slices.IndexFunc(c.Abilities, func(a *save.Ability) bool { return a.AbilityID == ability.AbilityID }); i >= 0 {
+		c.RemoveAbilityIndex(i)
 	}
 }
 
 func (c *Character) RemoveAbilityIndex(index int) {
-	a := c.Abilities[index]
-	delete(c.abilitiesLookup, a.AbilityID)
-	c.Abilities = append(c.Abilities[:index], c.Abilities[index+1:]...)
+	if index < 0 || index >= len(c.Abilities) {
+		return
+	}
+	c.Abilities = slices.Delete(c.Abilities, index, index+1)
 }
 
+// AbilitiesToSave returns the abilities to write: placeholders (ID 0) are
+// skipped and only the first ability of each ID is kept.
 func (c *Character) AbilitiesToSave() []*save.Ability {
 	a := make([]*save.Ability, 0, len(c.Abilities))
+	seen := make(map[int]bool, len(c.Abilities))
 	for _, i := range c.Abilities {
-		if i.AbilityID != 0 {
+		if i.AbilityID != 0 && !seen[i.AbilityID] {
+			seen[i.AbilityID] = true
 			a = append(a, i)
 		}
 	}
@@ -155,13 +176,17 @@ func (c *Character) AbilitiesToSave() []*save.Ability {
 }
 
 func (c *Character) HasAbility(id int) bool {
-	_, ok := c.abilitiesLookup[id]
+	_, ok := c.GetAbility(id)
 	return ok
 }
 
 func (c *Character) GetAbility(id int) (a *save.Ability, ok bool) {
-	a, ok = c.abilitiesLookup[id]
-	return
+	for _, a = range c.Abilities {
+		if a.AbilityID == id {
+			return a, true
+		}
+	}
+	return nil, false
 }
 
 func (c *Character) ToSave() (s string, err error) {
@@ -173,7 +198,7 @@ func (c *Character) ToSave() (s string, err error) {
 			return
 		}
 	}
-	if err = c.Base.SetAbilityList(c.Abilities); err != nil {
+	if err = c.Base.SetAbilityList(c.AbilitiesToSave()); err != nil {
 		return
 	}
 	if err = c.Base.SetAbilitySlotData(c.AbilitySlotData); err != nil {

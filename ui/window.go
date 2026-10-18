@@ -253,8 +253,10 @@ func createSupportMenu(w fyne.Window) *fyne.Menu {
 ---
 Written by [Kiame Vivacity](https://github.com/kiamev)
 ### Support Me:
-- [Patreon: https://www.patreon.com/kiamev](https://ko-fi.com/kiamev)
+- [Patreon: https://www.patreon.com/kiamev](https://www.patreon.com/kiamev)
 - [Ko-fi: https://ko-fi.com/kiamev](https://ko-fi.com/kiamev)
+
+Linux port and maintenance by [ValentinGrim](https://github.com/ValentinGrim/final-fantasy-pr-save-editor)
 ---
 ### Contributors:
 - Yosituna for compiling FF I - V game data

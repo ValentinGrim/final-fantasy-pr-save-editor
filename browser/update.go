@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	tagUrl = `https://api.github.com/repos/KiameV/final-fantasy-pr-save-editor/tags`
-	relUrl = `https://github.com/KiameV/final-fantasy-pr-save-editor/releases/%s`
-
-	Version = "1.3.1"
+	tagUrl = `https://api.github.com/repos/ValentinGrim/final-fantasy-pr-save-editor/tags`
+	relUrl = `https://github.com/ValentinGrim/final-fantasy-pr-save-editor/releases/%s`
 )
+
+// Version is overridden at build time from the git tag:
+// -ldflags "-X pixel-remastered-save-editor/browser.Version=1.4.0"
+var Version = "1.4.0"
 
 type (
 	tag struct {

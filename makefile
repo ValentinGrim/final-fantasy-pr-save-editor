@@ -1,7 +1,7 @@
 # FFPR Save Editor - build for Linux and Windows.
 #
 # On Linux:   make build-linux | build-windows (cross, needs mingw-w64) | all
-#             make package-linux | install-linux [PREFIX=~/.local]
+#             make package-linux | package-windows | install-linux [PREFIX=~/.local]
 # On Windows: make (from an MSYS2/Git-Bash shell, with Go and a MinGW gcc on PATH)
 #
 # Useful overrides:
@@ -9,6 +9,9 @@
 #   UPX=                disable upx compression (it is skipped anyway if upx is missing)
 #   WINDOWS_CC=...      C compiler used for the Windows build
 #   PREFIX=/usr/local   install prefix for install-linux (DESTDIR is honoured too)
+#   VERSION=1.4.0       version embedded in the binaries (default: latest git tag
+#                       without its leading "v"; empty keeps the in-code default)
+#   DIST=/some/dir      output directory (command line only)
 
 APP      := FFPR_Save_Editor
 APP_ID   := io.github.valentingrim.ffpr-save-editor
@@ -17,7 +20,15 @@ DIST     := dist
 GO       ?= go
 UPX      ?= upx
 TAGS     ?=
-LDFLAGS  := -s -w
+
+# Version shown by the app and used by the update checker. Computed once here
+# (not on every expansion); git or tags missing yields an empty value silently.
+ifeq ($(origin VERSION),undefined)
+VERSION := $(patsubst v%,%,$(shell command -v git >/dev/null 2>&1 && git describe --tags --abbrev=0 2>/dev/null))
+endif
+VERSION_PKG := pixel-remastered-save-editor/browser.Version
+
+LDFLAGS  := -s -w $(if $(VERSION),-X $(VERSION_PKG)=$(VERSION))
 GOFLAGS_BUILD = -trimpath $(if $(TAGS),-tags '$(TAGS)')
 
 LINUX_BIN   := $(DIST)/$(APP)
@@ -31,6 +42,14 @@ ICON_SIZE    := 256x256
 LINUX_PKG_NAME := $(APP)-linux-amd64
 LINUX_PKG_DIR  := $(DIST)/$(LINUX_PKG_NAME)
 LINUX_TARBALL  := $(DIST)/$(LINUX_PKG_NAME).tar.xz
+
+# Asset names are deliberately version-free: GitHub release assets already live
+# under their tag, and stable names make .../releases/latest/download/<name>
+# links work.
+WINDOWS_ZIP := $(DIST)/$(APP)-windows-amd64.zip
+
+# Pinned for reproducible builds; bump when a new go-winres is released.
+GO_WINRES_VERSION ?= v0.3.3
 
 PREFIX  ?= $(HOME)/.local
 DESTDIR ?=
@@ -59,14 +78,16 @@ endif
 
 # Compress $(1) with upx when available.
 define compress
-@if [ -n "$(UPX)" ] && command -v "$(UPX)" >/dev/null 2>&1; then \
+@if [ -z "$(UPX)" ]; then \
+		echo "upx disabled (UPX=), not compressing $(1)"; \
+	elif command -v "$(UPX)" >/dev/null 2>&1; then \
 		echo "$(UPX) -9 $(1)"; "$(UPX)" -9 -q "$(1)"; \
 	else \
 		echo "upx not found, skipping compression of $(1)"; \
 	fi
 endef
 
-.PHONY: all build-linux build-windows winres setup package-linux \
+.PHONY: all build-linux build-windows winres setup package-linux package-windows \
 	install-linux uninstall-linux clean
 
 all: build-linux build-windows
@@ -94,7 +115,7 @@ $(firstword $(WINRES_SYSO)): $(ICON)
 	fi
 
 setup:
-	$(GO) install github.com/tc-hib/go-winres@latest
+	$(GO) install github.com/tc-hib/go-winres@$(GO_WINRES_VERSION)
 	$(MAKE) --no-print-directory winres
 
 package-linux: build-linux
@@ -107,6 +128,24 @@ package-linux: build-linux
 	tar -C $(DIST) -cJf $(LINUX_TARBALL) $(LINUX_PKG_NAME)
 	rm -rf $(LINUX_PKG_DIR)
 	@echo "Created $(LINUX_TARBALL)"
+
+# zip -j stores the files without their directory; bsdtar/python are fallbacks
+# for systems without Info-ZIP (python's zipfile CLI also stores basenames).
+package-windows: build-windows
+	rm -f $(WINDOWS_ZIP)
+	@if command -v zip >/dev/null 2>&1; then \
+		echo "zip -j $(WINDOWS_ZIP) $(WINDOWS_BIN) LICENSE README.md"; \
+		zip -j -q "$(WINDOWS_ZIP)" "$(WINDOWS_BIN)" LICENSE README.md; \
+	elif command -v bsdtar >/dev/null 2>&1; then \
+		echo "bsdtar -a -cf $(WINDOWS_ZIP) ..."; \
+		bsdtar -a -cf "$(abspath $(WINDOWS_ZIP))" -C "$(abspath $(DIST))" $(APP).exe -C "$(CURDIR)" LICENSE README.md; \
+	elif command -v python3 >/dev/null 2>&1; then \
+		echo "python3 -m zipfile -c $(WINDOWS_ZIP) ..."; \
+		python3 -m zipfile -c "$(WINDOWS_ZIP)" "$(WINDOWS_BIN)" LICENSE README.md; \
+	else \
+		echo "error: need zip, bsdtar or python3 to create $(WINDOWS_ZIP)" >&2; exit 1; \
+	fi
+	@echo "Created $(WINDOWS_ZIP)"
 
 # Builds the binary only if it does not exist yet, so that e.g.
 # "sudo make install-linux PREFIX=/usr/local" does not run go build as root.

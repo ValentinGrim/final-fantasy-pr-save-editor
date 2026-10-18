@@ -57,16 +57,19 @@ All outputs go to `dist/`.
 
 | Command | What it does |
 |---------|--------------|
-| `make setup` | Installs `go-winres` and generates the Windows icon/manifest resources |
+| `make setup` | Installs `go-winres` (pinned version) and generates the Windows icon/manifest resources |
 | `make build-linux` (default) | Builds `dist/FFPR_Save_Editor` |
 | `make build-windows` | Cross-compiles `dist/FFPR_Save_Editor.exe` (needs mingw-w64) |
 | `make all` | Both of the above |
 | `make package-linux` | Creates `dist/FFPR_Save_Editor-linux-amd64.tar.xz` (binary, icon, `.desktop` file) |
+| `make package-windows` | Creates `dist/FFPR_Save_Editor-windows-amd64.zip` (`.exe`, `LICENSE`, `README.md`) |
 | `make install-linux` | Installs the binary, icon and menu entry into `~/.local` (override with `PREFIX=...`) |
 | `make uninstall-linux` | Removes what `install-linux` installed |
 | `make clean` | Removes `dist/` and the generated Windows resources |
 
 If `upx` is installed the binaries are compressed with it; otherwise that step is skipped (`make UPX=` disables it explicitly).
+
+The version shown by the editor (and used by its update check) comes from the latest git tag, without its leading `v` (tag `v1.4.0` gives `1.4.0`). Override it with `make VERSION=1.4.0`; if there is no tag (or no git) and `VERSION` is not set, the default version written in the code is kept. Package file names never contain the version, so `releases/latest/download/<file>` links keep working.
 
 The Linux binary runs natively on Wayland when available and falls back to X11 otherwise. Under Wayland the window icon comes from the installed `.desktop` file (`make install-linux`).
 
@@ -74,9 +77,21 @@ The Linux binary runs natively on Wayland when available and falls back to X11 o
 Install Go and a MinGW-w64 gcc (e.g. [MSYS2](https://www.msys2.org/) or TDM-GCC), make sure `gcc` is on your `PATH`, then:
 
 ```
-go install github.com/tc-hib/go-winres@latest
+go install github.com/tc-hib/go-winres@v0.3.3
 go-winres simply --icon icon.png
 go build -ldflags="-s -w -H=windowsgui" -o FFPR_Save_Editor.exe
 ```
 
 From an MSYS2 shell with `make` installed, running `make` does the same and writes `dist/FFPR_Save_Editor.exe`.
+
+### Releases
+Every push and pull request is built by GitHub Actions (Linux build, Windows cross-build and `go vet`); the binaries are kept as workflow artifacts for 7 days.
+
+To publish a release, push a version tag:
+
+```
+git tag v1.4.0
+git push origin v1.4.0
+```
+
+The `Release` workflow then builds both versions with `VERSION=1.4.0` (without UPX, to avoid antivirus false positives) and creates the GitHub release for that tag with auto-generated notes and these assets: `FFPR_Save_Editor-linux-amd64.tar.xz`, `FFPR_Save_Editor-windows-amd64.zip`, `FFPR_Save_Editor.exe` and `SHA256SUMS`. Tags containing a `-` (e.g. `v1.4.0-rc1`) are published as pre-releases. The workflow can also be run by hand (Actions > Release > Run workflow) for an existing tag, which replaces the assets of that tag's release.

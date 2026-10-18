@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    # Branches only: tag pushes are handled by release.yml.
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux build + go vet
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc pkg-config libgl1-mesa-dev xorg-dev libgtk-3-dev \
+            libwayland-dev libxkbcommon-dev
+
+      - name: go vet
+        run: go vet ./...
+
+      # UPX is disabled in CI: packed binaries trigger antivirus false positives.
+      - name: Build
+        run: make build-linux UPX=
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: FFPR_Save_Editor-linux-amd64
+          path: dist/FFPR_Save_Editor
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    name: Windows cross-build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: Install go-winres and generate resources
+        run: make setup
+
+      - name: go vet (windows)
+        run: go vet ./...
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "1"
+          CC: x86_64-w64-mingw32-gcc
+
+      - name: Build
+        run: make build-windows UPX=
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: FFPR_Save_Editor-windows-amd64
+          path: dist/FFPR_Save_Editor.exe
+          if-no-files-found: error
+          retention-days: 7

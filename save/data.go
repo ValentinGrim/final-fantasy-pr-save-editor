@@ -1,7 +1,9 @@
 package save
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 
 	oj "github.com/virtuald/go-ordered-json"
 	"pixel-remastered-save-editor/global"
@@ -21,8 +23,9 @@ type (
 		IsCompleteFlag       int         `json:"isCompleteFlag"`
 		Trimmed              []byte      `json:"-"`
 		Game                 global.Game `json:"-"`
-		BestiaryDataInternal *[]byte     `json:"-"`
-		BestiaryDataTrim     *[]byte     `json:"-"`
+		BestiaryDataInternal []byte      `json:"-"` // bestiary file (shared by all slots); nil if missing or unreadable
+		BestiaryDataTrim     []byte      `json:"-"`
+		bestiaryLoaded       []byte
 	}
 	ConfigData struct {
 		ButtonType              int      `json:"buttonType"`
@@ -111,23 +114,67 @@ func (d *Data) SetDataStorage(v *DataStorage) (err error) {
 	return
 }
 
+// SetLoadedBestiary stores the decoded bestiary file and the prefix (BOM)
+// that preceded its encoded content.
+func (d *Data) SetLoadedBestiary(b []byte, prefix []byte) {
+	d.BestiaryDataInternal = b
+	d.BestiaryDataTrim = prefix
+	d.bestiaryLoaded = bytes.Clone(b)
+}
+
+// BestiaryToSave returns the bestiary to write and whether it differs from
+// the file that was loaded. A bestiary that was not loaded is never changed.
+func (d *Data) BestiaryToSave() (b []byte, prefix []byte, changed bool) {
+	if d.BestiaryDataInternal == nil {
+		return nil, nil, false
+	}
+	return d.BestiaryDataInternal, d.BestiaryDataTrim, !bytes.Equal(d.BestiaryDataInternal, d.bestiaryLoaded)
+}
+
+// Bestiary returns nil, nil when no bestiary was loaded.
 func (d *Data) Bestiary() (b *Bestiary, err error) {
-	if d.BestiaryDataTrim != nil {
-		b = &Bestiary{}
-		if err = json.Unmarshal(*d.BestiaryDataInternal, b); err != nil {
-			b = nil
-		}
+	if d.BestiaryDataInternal == nil {
+		return nil, nil
+	}
+	b = &Bestiary{}
+	if err = json.Unmarshal(d.BestiaryDataInternal, b); err != nil {
+		b = nil
 	}
 	return
 }
 
+// SetBestiary writes the monster defeats and the total of b into the loaded
+// bestiary. Everything else (scenario flags, members the editor does not
+// know) is kept as it was read.
 func (d *Data) SetBestiary(b *Bestiary) (err error) {
-	if b != nil {
-		var i []byte
-		if i, err = json.Marshal(*b); err == nil {
-			d.BestiaryDataInternal = &i
+	if b == nil {
+		return nil
+	}
+	if d.BestiaryDataInternal == nil {
+		return errors.New("no bestiary was loaded")
+	}
+	var cur *Bestiary
+	if cur, err = d.Bestiary(); err != nil {
+		return
+	}
+	defeats := []byte(b.MonsterDefeatsInternal)
+	if cur.MonsterDefeatsInternal != "" {
+		var patch oj.OrderedObject
+		if patch, err = decodeOrdered(defeats); err != nil {
+			return
+		}
+		if defeats, err = overlayJSON([]byte(cur.MonsterDefeatsInternal), patch); err != nil {
+			return
 		}
 	}
+	var out []byte
+	if out, err = overlayJSON(d.BestiaryDataInternal, oj.OrderedObject{
+		{Key: "monsterDefeats", Value: string(defeats)},
+		{Key: "totalSubjugationCount", Value: b.TotalSubjugationCount},
+	}); err != nil {
+		return
+	}
+	d.BestiaryDataInternal = out
 	return
 }
 

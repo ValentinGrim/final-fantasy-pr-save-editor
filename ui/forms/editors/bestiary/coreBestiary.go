@@ -30,18 +30,11 @@ func NewCore(b *core.Bestiary, finder finder.Find, search *inputs.Search) *Besti
 	}
 	e.ExtendBaseWidget(e)
 	e.killAllMonstersButton = widget.NewButton("Kill All Monsters", func() {
-		killed := make(map[int]int)
-		defeats := make([]core.MonsterDefeatedCount, 0, len(*search.Entries))
-		for _, d := range e.monstersDefeated {
-			killed[d.ID.Int()] = d.Count.Int()
-			defeats = append(defeats, core.MonsterDefeatedCount{ID: d.ID.Int(), Count: d.Count.Int()})
-		}
+		ids := make([]int, 0, len(*search.Entries))
 		for _, i := range *search.Entries {
-			if _, found := killed[i.Value]; !found {
-				defeats = append(defeats, core.MonsterDefeatedCount{ID: i.Value, Count: 1})
-			}
+			ids = append(ids, i.Value)
 		}
-		b.MonsterDefeats = defeats
+		b.DefeatAll(ids)
 
 		e.monstersDefeated = make([]*inputs.IdCountEntry, len(b.MonsterDefeats))
 		for i, d := range b.MonsterDefeats {
@@ -50,9 +43,10 @@ func NewCore(b *core.Bestiary, finder finder.Find, search *inputs.Search) *Besti
 		e.buildRows()
 	})
 	e.addRowButton = widget.NewButton("+", func() {
-		d := core.MonsterDefeatedCount{}
-		b.MonsterDefeats = append(b.MonsterDefeats, d)
-		e.addRow(inputs.NewIdCountEntryWithDataWithHint(&d.ID, &d.Count, finder))
+		d := b.Add()
+		row := inputs.NewIdCountEntryWithDataWithHint(&d.ID, &d.Count, finder)
+		e.monstersDefeated = append(e.monstersDefeated, row)
+		e.addRow(row)
 	})
 
 	for i, d := range b.MonsterDefeats {

@@ -11,7 +11,7 @@
 #   PREFIX=/usr/local   install prefix for install-linux (DESTDIR is honoured too)
 
 APP      := FFPR_Save_Editor
-APP_ID   := io.github.kiamev.ffpr-save-editor
+APP_ID   := io.github.valentingrim.ffpr-save-editor
 DIST     := dist
 
 GO       ?= go

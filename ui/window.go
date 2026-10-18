@@ -24,7 +24,7 @@ import (
 const (
 	appName = "Final Fantasy Pixel Remastered Save Editor"
 	// appID must match the .desktop file name so Wayland compositors find the icon
-	appID = "io.github.kiamev.ffpr-save-editor"
+	appID = "io.github.valentingrim.ffpr-save-editor"
 )
 
 type (

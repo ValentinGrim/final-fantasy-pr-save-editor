@@ -8,9 +8,15 @@ import (
 	"pixel-remastered-save-editor/global"
 )
 
-const file = "prSaveEditor.config"
+const (
+	file   = "prSaveEditor.config"
+	appDir = "ffpr-save-editor"
+)
 
-var config ConfigData
+var (
+	config ConfigData
+	path   string
+)
 
 type ConfigData struct {
 	SaveDir1          string `json:"dir1"`
@@ -23,19 +29,51 @@ type ConfigData struct {
 }
 
 func init() {
-	if b, err := os.ReadFile(filepath.Join(global.PWD, file)); err == nil {
+	path = resolvePath()
+	if b, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(b, &config)
 	}
 }
 
-func saveConfig() {
-	if f, e1 := os.Create(filepath.Join(global.PWD, file)); e1 == nil {
-		b, err := json.Marshal(&config)
-		if err == nil {
-			_ = os.WriteFile(filepath.Join(global.PWD, file), b, 755)
+// resolvePath returns where the config lives. A legacy config next to the
+// working dir or the executable wins (portable mode), otherwise the per-user
+// config dir is used, falling back to the working dir.
+func resolvePath() string {
+	for _, d := range legacyDirs() {
+		p := filepath.Join(d, file)
+		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+			return p
 		}
-		_, _ = f.Write(b)
 	}
+	if d, err := os.UserConfigDir(); err == nil && d != "" {
+		return filepath.Join(d, appDir, file)
+	}
+	return filepath.Join(global.PWD, file)
+}
+
+func legacyDirs() []string {
+	dirs := []string{global.PWD}
+	if exe, err := os.Executable(); err == nil {
+		if r, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = r
+		}
+		if d := filepath.Dir(exe); d != global.PWD {
+			dirs = append(dirs, d)
+		}
+	}
+	return dirs
+}
+
+// Path returns the config file location.
+func Path() string { return path }
+
+func saveConfig() {
+	b, err := json.Marshal(&config)
+	if err != nil {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.WriteFile(path, b, 0o644)
 }
 
 func Dir(saveType global.Game) (dir string) {

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=FFPR Save Editor
+GenericName=Save Editor
+Comment=Edit Final Fantasy I-VI Pixel Remaster save files
+Exec=FFPR_Save_Editor
+Icon=ffpr-save-editor
+Terminal=false
+Categories=Game;
+Keywords=final fantasy;pixel remaster;save;editor;

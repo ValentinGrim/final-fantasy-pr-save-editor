@@ -51,23 +51,7 @@ func NewFileIO(kind Kind, game global.Game, window fyne.Window, dir string, onSe
 		dir = "."
 	}
 	if dir == "" || dir == "." {
-		switch game {
-		case global.One:
-			dir = one
-		case global.Two:
-			dir = two
-		case global.Three:
-			dir = three
-		case global.Four:
-			dir = four
-		case global.Five:
-			dir = five
-		default: // six
-			dir = six
-		}
-
-		dir = fmt.Sprintf("%s/Documents/My Games/%s/Steam/76561197971028520", os.Getenv("USERPROFILE"), dir)
-		if _, err := os.Stat(dir); err != nil {
+		if dir = defaultSaveDir(game); dir == "" {
 			dir = "."
 		}
 	}
@@ -148,7 +132,7 @@ func (w *saveSelect) CreateRenderer() fyne.WidgetRenderer {
 	top := container.NewBorder(nil, nil,
 		widget.NewLabel("Directory:"),
 		widget.NewButton("Change", func() {
-			if dir, err := dialog.Directory().Title("Load images").Browse(); err == nil && dir != "" {
+			if dir, err := dialog.Directory().Title("Select save directory").Browse(); err == nil && dir != "" {
 				_ = w.dir.Set(dir)
 			}
 		}),

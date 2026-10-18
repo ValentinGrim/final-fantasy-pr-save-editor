@@ -29,21 +29,27 @@ func NewEditor(game global.Game, save *core.Save) *Editor {
 	inputs.Load(game)
 
 	tabs := container.NewAppTabs(
-		container.NewTabItem("Characters", NewCharacters(s.save)),
-		container.NewTabItem("Inventory", NewInventory(s.save)),
-		container.NewTabItem("Party", editors.NewCoreParty(s.save.Party, s.save.Parties)),
-		container.NewTabItem("Map Data", mapData.NewCore(s.save.Map)),
-		container.NewTabItem("Transportation", editors.NewCoreTransportation(s.game, s.save.Transportations)),
-		container.NewTabItem("Misc", NewMisc(s.save.Misc)),
+		tab("Characters", NewCharacters(s.save)),
+		tab("Inventory", NewInventory(s.save)),
+		tab("Party", editors.NewCoreParty(s.save.Party, s.save.Parties)),
+		tab("Map Data", mapData.NewCore(s.save.Map)),
+		tab("Transportation", editors.NewCoreTransportation(s.game, s.save.Transportations)),
+		tab("Misc", NewMisc(s.save.Misc)),
 	)
 	if s.save.Bestiary != nil {
-		tabs.Append(container.NewTabItem("Bestiary", NewBestiary(s.save.Bestiary)))
+		tabs.Append(tab("Bestiary", NewBestiary(s.save.Bestiary)))
 	}
 	if s.game.IsSix() {
-		tabs.Append(container.NewTabItem("Espers", editors.NewEspers(s.save)))
+		tabs.Append(tab("Espers", editors.NewEspers(s.save)))
 	}
 	s.renderer = widget.NewSimpleRenderer(tabs)
 	return s
+}
+
+// tab lets the content scroll when it does not fit: the window grows to the
+// MinSize of its content, it must not get wider than the screen.
+func tab(text string, content fyne.CanvasObject) *container.TabItem {
+	return container.NewTabItem(text, container.NewScroll(content))
 }
 
 func (s *Editor) CreateRenderer() fyne.WidgetRenderer {

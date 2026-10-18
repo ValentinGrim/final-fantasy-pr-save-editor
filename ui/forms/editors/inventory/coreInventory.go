@@ -33,42 +33,19 @@ func NewCore(inv *core.Inventory, finder finder.Find, search *inputs.Search) *In
 	return e
 }
 
+// CreateRenderer lists one item per row: name, ID and count, the search on the
+// right.
 func (e *Inventory) CreateRenderer() fyne.WidgetRenderer {
-	const columns = 6
-	id1 := widget.NewLabel("Item ID")
-	id1.Alignment = fyne.TextAlignCenter
-	id2 := widget.NewLabel("Item ID")
-	id2.Alignment = fyne.TextAlignCenter
-	c1 := widget.NewLabel("Count")
-	c1.Alignment = fyne.TextAlignCenter
-	c2 := widget.NewLabel("Count")
-	c2.Alignment = fyne.TextAlignCenter
+	id, idWidth := inputs.Header("Item ID")
+	count, countWidth := inputs.Header("Count")
 	reset := widget.NewCheckWithData("Reset Sort", e.resetSort)
+	headers := container.NewPadded(inputs.ListRow(reset, inputs.Sized(id, idWidth), inputs.Sized(count, countWidth)))
 
-	headers := container.NewPadded(container.NewGridWithColumns(columns, reset, id1, c1, container.NewStack(), id2, c2))
-
-	l := len(e.items)
 	rows := container.NewVBox()
-	for i := 0; i < l; i += 2 {
-		entry := e.items[i]
-		g := container.NewGridWithColumns(columns, entry.Label, entry.ID, entry.Count)
-		if j := i + 1; j < l {
-			entry = e.items[j]
-			g.Add(entry.Label)
-			g.Add(entry.ID)
-			g.Add(entry.Count)
-		}
-		rows.Add(container.NewPadded(g))
+	for _, entry := range e.items {
+		rows.Add(container.NewPadded(inputs.ListRow(entry.Label, inputs.Sized(entry.ID, idWidth), inputs.Sized(entry.Count, countWidth))))
 	}
-	return widget.NewSimpleRenderer(
-		container.NewBorder(nil, nil,
-			// left
-			container.NewBorder(
-				headers, nil, nil, nil,
-				container.NewVScroll(rows)),
-			// right
-			container.NewGridWithColumns(2,
-				e.search.Fields(),
-				e.search.Filter()),
-		))
+	return widget.NewSimpleRenderer(inputs.WithSearch(
+		container.NewBorder(headers, nil, nil, nil, container.NewVScroll(rows)),
+		e.search.Panel()))
 }

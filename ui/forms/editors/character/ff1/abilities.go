@@ -13,6 +13,8 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+const abilityID = "Ability ID"
+
 type (
 	Abilities struct {
 		widget.BaseWidget
@@ -41,7 +43,7 @@ func NewAbilities(c *core.Character) *Abilities {
 		e.body.Add(widget.NewLabel(fmt.Sprintf("%d", i+1)))
 		for _, a := range asd.SlotInfo.Values {
 			r := inputs.NewIdEntryWithDataWithHint(&a.AbilityID, finder.Abilities)
-			e.body.Add(container.NewPadded(container.NewGridWithColumns(3, r.Label, r.ID)))
+			e.body.Add(container.NewPadded(inputs.ListRow(r.Label, inputs.Sized(r.ID, inputs.EntryWidth))))
 		}
 	}
 	for _, a := range e.c.Abilities {
@@ -51,25 +53,25 @@ func NewAbilities(c *core.Character) *Abilities {
 }
 
 func (e *Abilities) addRow(a *save.Ability) {
-	var g *fyne.Container
+	var g fyne.CanvasObject
 	r := inputs.NewIdEntryWithDataWithHint(&a.AbilityID, finder.Abilities)
-	g = container.NewGridWithColumns(4, r.Label, r.ID, widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+	g = inputs.ListRow(r.Label, inputs.Sized(r.ID, inputs.ColumnWidth(abilityID)), widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 		e.c.RemoveAbility(a)
 		e.abilities.Remove(g)
 	}))
 	e.abilities.Add(g)
 }
 
+// CreateRenderer shows the abilities above the ability slots, the search on
+// the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
-	search := inputs.GetSearches().Abilities
-	left := container.NewBorder(
-		container.NewGridWithColumns(4, container.NewStack(), widget.NewLabel("Ability ID"), e.add),
+	id, width := inputs.Header(abilityID)
+	var editor fyne.CanvasObject = container.NewBorder(
+		inputs.ListRow(container.NewStack(), inputs.Sized(id, width), e.add),
 		nil, nil, nil,
 		container.NewVScroll(e.abilities))
-	right := container.NewGridWithColumns(2, search.Fields(), search.Filter())
-	return widget.NewSimpleRenderer(
-		container.NewBorder(nil, nil,
-			left, right,
-			container.NewBorder(nil, nil,
-				container.NewVScroll(e.body), nil)))
+	if len(e.body.Objects) > 0 {
+		editor = container.NewVSplit(editor, container.NewVScroll(e.body))
+	}
+	return widget.NewSimpleRenderer(inputs.WithSearch(editor, inputs.GetSearches().Abilities.Panel()))
 }

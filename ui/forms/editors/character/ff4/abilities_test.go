@@ -22,10 +22,24 @@ func ids(l []*save.Ability) []int {
 	return out
 }
 
+// button returns the first button in o, the delete button of a row.
+func button(o fyne.CanvasObject) *widget.Button {
+	switch o := o.(type) {
+	case *widget.Button:
+		return o
+	case *fyne.Container:
+		for _, c := range o.Objects {
+			if b := button(c); b != nil {
+				return b
+			}
+		}
+	}
+	return nil
+}
+
 func deleteRow(t *testing.T, e *Abilities, row int) {
 	t.Helper()
-	g := e.abilities.Objects[row].(*fyne.Container)
-	test.Tap(g.Objects[2].(*widget.Button))
+	test.Tap(button(e.abilities.Objects[row]))
 }
 
 func TestAddRemoveRows(t *testing.T) {

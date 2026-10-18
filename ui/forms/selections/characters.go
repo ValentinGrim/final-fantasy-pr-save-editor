@@ -64,7 +64,7 @@ func NewCharacters(save *core.Save) *Characters {
 }
 
 func (s *Characters) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewBorder(s.top, nil, s.middle, nil))
+	return widget.NewSimpleRenderer(container.NewBorder(s.top, nil, nil, nil, s.middle))
 }
 
 func (s *Characters) abilities(game global.Game, c *core.Character) (a fyne.CanvasObject) {

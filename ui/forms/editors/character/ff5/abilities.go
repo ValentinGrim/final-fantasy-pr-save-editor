@@ -57,16 +57,15 @@ func (e *Abilities) createAbilities(abilities []models.NameValue) fyne.CanvasObj
 			e.addAbility(a)
 			e.addRow(rows, a, f, abilities)
 		}))
-	return container.NewBorder(
-		top, nil,
-		container.NewVScroll(rows),
-		container.NewGridWithColumns(2, search.Fields(), search.Filter()))
+	return inputs.WithSearch(
+		container.NewBorder(top, nil, nil, nil, container.NewVScroll(rows)),
+		search.Panel())
 }
 
 func (e *Abilities) addRow(rows *fyne.Container, a *save.Ability, f finder.Find, abilities []models.NameValue) {
 	i := inputs.NewIdEntryWithDataWithHint(&a.AbilityID, f)
-	var g *fyne.Container
-	g = container.NewGridWithColumns(3, i.Label, i.ID, widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+	var g fyne.CanvasObject
+	g = inputs.ListRow(i.Label, inputs.Sized(i.ID, inputs.EntryWidth), widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 		e.removeAbility(a)
 		rows.Remove(g)
 	}))

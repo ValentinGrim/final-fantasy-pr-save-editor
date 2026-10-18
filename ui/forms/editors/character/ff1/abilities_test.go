@@ -13,6 +13,21 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+// button returns the first button in o, the delete button of a row.
+func button(o fyne.CanvasObject) *widget.Button {
+	switch o := o.(type) {
+	case *widget.Button:
+		return o
+	case *fyne.Container:
+		for _, c := range o.Objects {
+			if b := button(c); b != nil {
+				return b
+			}
+		}
+	}
+	return nil
+}
+
 func TestAddedAbilityIsKept(t *testing.T) {
 	test.NewTempApp(t)
 	finder.Load(global.One, nil)
@@ -37,8 +52,7 @@ func TestAddedAbilityIsKept(t *testing.T) {
 	}
 
 	// Delete the original row: the added ability must stay.
-	g := e.abilities.Objects[0].(*fyne.Container)
-	test.Tap(g.Objects[2].(*widget.Button))
+	test.Tap(button(e.abilities.Objects[0]))
 	if len(c.Abilities) != 1 || c.Abilities[0] != added || len(e.abilities.Objects) != 1 {
 		t.Fatalf("after delete: %d abilities, %d rows", len(c.Abilities), len(e.abilities.Objects))
 	}

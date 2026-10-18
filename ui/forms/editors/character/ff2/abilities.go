@@ -14,6 +14,11 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+const (
+	abilityID  = "Ability ID"
+	skillLevel = "Skill Level"
+)
+
 type (
 	Abilities struct {
 		widget.BaseWidget
@@ -61,24 +66,24 @@ func (e *Abilities) addRow(a *save.Ability) {
 			}
 		}
 	})
-	var g *fyne.Container
-	g = container.NewGridWithColumns(4,
-		id.Label, id.ID, lvl, widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+	var g fyne.CanvasObject
+	g = inputs.ListRow(id.Label,
+		inputs.Sized(id.ID, inputs.ColumnWidth(abilityID)),
+		inputs.Sized(lvl, inputs.ColumnWidth(skillLevel)),
+		widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			e.c.RemoveAbility(a)
 			e.abilities.Remove(g)
 		}))
 	e.abilities.Add(g)
 }
 
+// CreateRenderer lists the abilities, the search on the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
-	search := inputs.GetSearches().Abilities
+	id, idWidth := inputs.Header(abilityID)
+	lvl, lvlWidth := inputs.Header(skillLevel)
 	left := container.NewBorder(
-		container.NewGridWithColumns(4, container.NewStack(), widget.NewLabel("Ability ID"), widget.NewLabel("Skill Level"), e.add),
+		inputs.ListRow(container.NewStack(), inputs.Sized(id, idWidth), inputs.Sized(lvl, lvlWidth), e.add),
 		nil, nil, nil,
 		container.NewVScroll(e.abilities))
-	right := container.NewGridWithColumns(2, search.Fields(), search.Filter())
-	return widget.NewSimpleRenderer(
-		container.NewBorder(
-			nil, nil, left, right, nil,
-		))
+	return widget.NewSimpleRenderer(inputs.WithSearch(left, inputs.GetSearches().Abilities.Panel()))
 }

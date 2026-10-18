@@ -112,7 +112,7 @@ func Load(game global.Game) {
 func NewSearch(nvss ...[]models.NameValue) *Search {
 	s := &Search{
 		Text:    widget.NewTextGrid(),
-		Input:   widget.NewEntry(),
+		Input:   newFilterEntry(),
 		Results: widget.NewTextGrid(),
 		Entries: &nvss[0],
 	}
@@ -130,7 +130,7 @@ func NewSearch(nvss ...[]models.NameValue) *Search {
 func newSearchFF2(nvss ...[]models.NameValue) *Search {
 	s := &Search{
 		Text:    widget.NewTextGrid(),
-		Input:   widget.NewEntry(),
+		Input:   newFilterEntry(),
 		Results: widget.NewTextGrid(),
 	}
 	s.onFilterChanged(nvss...)
@@ -159,6 +159,12 @@ func newSearchFF2(nvss ...[]models.NameValue) *Search {
 	return s
 }
 
+func newFilterEntry() *widget.Entry {
+	e := widget.NewEntry()
+	e.SetPlaceHolder("Filter by name")
+	return e
+}
+
 func (s *Search) onFilterChanged(nvss ...[]models.NameValue) {
 	s.Input.OnChanged = func(text string) {
 		if len(text) >= 2 {
@@ -178,18 +184,55 @@ func (s *Search) onFilterChanged(nvss ...[]models.NameValue) {
 	}
 }
 
+// Filter shows the filter entry above the entries matching it. The lists
+// scroll both ways, so a long name does not widen the editor.
 func (s *Search) Filter() fyne.CanvasObject {
 	if s == nil {
 		return container.NewStack()
 	}
-	return container.NewBorder(s.Input, nil, nil, nil, container.NewVScroll(s.Results))
+	return container.NewBorder(s.Input, nil, nil, nil, container.NewScroll(s.Results))
 }
 
+// Fields lists all the entries.
 func (s *Search) Fields() fyne.CanvasObject {
 	if s == nil {
 		return container.NewStack()
 	}
-	return container.NewVScroll(s.Text)
+	return container.NewScroll(s.Text)
+}
+
+// Panel shows the filter above the list of all the entries, nil without search.
+func (s *Search) Panel() fyne.CanvasObject {
+	if s == nil {
+		return nil
+	}
+	split := container.NewVSplit(s.Filter(), s.Fields())
+	split.Offset = 0.3
+	return split
+}
+
+// NamedSearch is a search shown in a tab of SearchPanels.
+type NamedSearch struct {
+	Name   string
+	Search *Search
+}
+
+// SearchPanels shows the panel of each search, in tabs when there are several.
+// It returns nil when no search is set.
+func SearchPanels(searches ...NamedSearch) fyne.CanvasObject {
+	var items []*container.TabItem
+	for _, n := range searches {
+		if p := n.Search.Panel(); p != nil {
+			items = append(items, container.NewTabItem(n.Name, p))
+		}
+	}
+	switch len(items) {
+	case 0:
+		return nil
+	case 1:
+		return items[0].Content
+	}
+	return container.NewAppTabs(items...)
 }
 
 func (s *Search) Count() (i int) {

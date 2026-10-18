@@ -11,6 +11,8 @@ import (
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
+const abilityID = "Ability ID"
+
 type (
 	Abilities struct {
 		widget.BaseWidget
@@ -39,20 +41,20 @@ func NewAbilities(c *core.Character) *Abilities {
 
 func (e *Abilities) addRow(a *save.Ability) {
 	r := inputs.NewIdEntryWithDataWithHint(&a.AbilityID, finder.Abilities)
-	var g *fyne.Container
-	g = container.NewGridWithColumns(3, r.Label, r.ID, widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+	var g fyne.CanvasObject
+	g = inputs.ListRow(r.Label, inputs.Sized(r.ID, inputs.ColumnWidth(abilityID)), widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 		e.c.RemoveAbility(a)
 		e.abilities.Remove(g)
 	}))
 	e.abilities.Add(g)
 }
 
+// CreateRenderer lists the abilities, the search on the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
-	search := inputs.GetSearches().Abilities
+	id, width := inputs.Header(abilityID)
 	left := container.NewBorder(
-		container.NewGridWithColumns(3, container.NewStack(), widget.NewLabel("Ability ID"), e.add),
+		inputs.ListRow(container.NewStack(), inputs.Sized(id, width), e.add),
 		nil, nil, nil,
 		container.NewVScroll(e.abilities))
-	right := container.NewGridWithColumns(2, search.Fields(), search.Filter())
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, left, right))
+	return widget.NewSimpleRenderer(inputs.WithSearch(left, inputs.GetSearches().Abilities.Panel()))
 }

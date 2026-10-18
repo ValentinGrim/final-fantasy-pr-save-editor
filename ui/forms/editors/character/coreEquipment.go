@@ -55,26 +55,17 @@ func NewCoreEquipment(game global.Game, c *core.Character) *Equipment {
 	return e
 }
 
+// CreateRenderer shows a form of the slots, the searches on the right.
 func (e *Equipment) CreateRenderer() fyne.WidgetRenderer {
-	rows := container.NewVBox()
-	itSearch := inputs.GetSearches().Items
-	eqSearch := inputs.GetSearches().Equipment
+	rows := inputs.NewForm()
 	for _, i := range e.inputs {
-		rows.Add(container.NewGridWithColumns(3, widget.NewLabel(i.name), i.Label, i.ID))
+		rows.Add(widget.NewLabel(i.name))
+		rows.Add(inputs.IDValue(i.ID, i.Label))
 	}
-	left := container.NewVScroll(rows)
-	var right *fyne.Container
+	searches := []inputs.NamedSearch{{Name: "Equipment", Search: inputs.GetSearches().Equipment}}
 	if e.game.IsSix() {
-		espSearch := inputs.NewSearch(ff6.Espers)
-		right = container.NewGridWithColumns(5,
-			eqSearch.Fields(), eqSearch.Filter(),
-			espSearch.Fields(), espSearch.Filter(),
-			itSearch.Fields())
-	} else {
-		right = container.NewGridWithColumns(4,
-			eqSearch.Fields(), eqSearch.Filter(),
-			itSearch.Fields(), itSearch.Filter())
+		searches = append(searches, inputs.NamedSearch{Name: "Espers", Search: inputs.NewSearch(ff6.Espers)})
 	}
-	return widget.NewSimpleRenderer(
-		container.NewBorder(nil, nil, left, right, nil))
+	searches = append(searches, inputs.NamedSearch{Name: "Items", Search: inputs.GetSearches().Items})
+	return widget.NewSimpleRenderer(inputs.WithSearch(container.NewVScroll(rows), inputs.SearchPanels(searches...)))
 }

@@ -18,6 +18,8 @@ type (
 		killAllMonstersButton *widget.Button
 		addRowButton          *widget.Button
 		rows                  *fyne.Container
+		// widths of the ID and count columns, set with the headers
+		idWidth, countWidth float32
 	}
 )
 
@@ -62,29 +64,24 @@ func NewCore(b *core.Bestiary, finder finder.Find, search *inputs.Search) *Besti
 	return e
 }
 
+// CreateRenderer lists one monster per row: name, ID and count, the search on
+// the right.
 func (b *Bestiary) CreateRenderer() fyne.WidgetRenderer {
-	const columns = 6
-	id := widget.NewLabel("Monster ID")
-	id.Alignment = fyne.TextAlignCenter
-	c := widget.NewLabel("Count")
-	c.Alignment = fyne.TextAlignCenter
-
-	headers := container.NewPadded(container.NewGridWithColumns(columns, container.NewStack(), id, c, container.NewStack()))
+	var id, c *widget.Label
+	id, b.idWidth = inputs.Header("Monster ID")
+	c, b.countWidth = inputs.Header("Count")
+	headers := container.NewPadded(inputs.ListRow(container.NewStack(), inputs.Sized(id, b.idWidth), inputs.Sized(c, b.countWidth)))
 
 	b.buildRows()
 
-	top := container.NewGridWithColumns(6)
-	top.Add(b.killAllMonstersButton)
-	top.Add(container.NewStack())
-	top.Add(b.addRowButton)
-
-	return widget.NewSimpleRenderer(
+	return widget.NewSimpleRenderer(inputs.WithSearch(
 		container.NewBorder(
-			top, nil, nil, nil,
+			container.NewHBox(b.killAllMonstersButton, b.addRowButton), nil, nil, nil,
 			// middle
 			container.NewBorder(
 				headers, nil, nil, nil,
-				container.NewVScroll(b.rows))))
+				container.NewVScroll(b.rows))),
+		b.search.Panel()))
 }
 
 func (b *Bestiary) buildRows() {
@@ -95,8 +92,5 @@ func (b *Bestiary) buildRows() {
 }
 
 func (b *Bestiary) addRow(d *inputs.IdCountEntry) {
-	const columns = 6
-	entry := d
-	g := container.NewGridWithColumns(columns, entry.Label, entry.ID, entry.Count)
-	b.rows.Add(container.NewPadded(g))
+	b.rows.Add(container.NewPadded(inputs.ListRow(d.Label, inputs.Sized(d.ID, b.idWidth), inputs.Sized(d.Count, b.countWidth))))
 }

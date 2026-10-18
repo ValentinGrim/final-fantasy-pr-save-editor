@@ -3,6 +3,7 @@ package ff6
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"pixel-remastered-save-editor/models"
 	"pixel-remastered-save-editor/models/core"
@@ -78,19 +79,19 @@ func (e *Abilities) createAbilities(a []models.NameValue) {
 	}
 }
 
+// CreateRenderer shows the spells in as many columns as fit, the abilities of
+// the character (Cyan, Sabin, Strago, Mog, Gau) on the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
-	ml := container.NewVBox()
-	mm := container.NewVBox()
-	mr := container.NewVBox()
+	// Skill levels go up to 100.
+	const levelWidth float32 = 70
+	var cell fyne.Size
+	magic := make([]fyne.CanvasObject, len(e.magicInputs))
 	for i, j := range e.magicInputs {
-		c := container.NewGridWithColumns(2, j.Label, j.ID)
-		if k := i % 3; k == 0 {
-			ml.Add(c)
-		} else if k == 1 {
-			mm.Add(c)
-		} else {
-			mr.Add(c)
-		}
+		// Size the cells for the longest name before truncating the labels.
+		cell = cell.Max(fyne.NewSize(
+			j.Label.MinSize().Width+levelWidth+theme.Padding(),
+			fyne.Max(j.Label.MinSize().Height, j.ID.MinSize().Height)))
+		magic[i] = inputs.ListRow(j.Label, inputs.Sized(j.ID, levelWidth))
 	}
 
 	left := container.NewBorder(
@@ -98,7 +99,7 @@ func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
 			widget.NewButton("All", func() { e.toggleAllMagic(true) }),
 			widget.NewButton("None", func() { e.toggleAllMagic(false) })),
 		nil, nil, nil,
-		container.NewVScroll(container.NewGridWithColumns(3, ml, mm, mr)))
+		container.NewVScroll(container.NewGridWrap(cell, magic...)))
 
 	var right *fyne.Container
 	if len(e.abilities) == 0 {
@@ -116,7 +117,7 @@ func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
 			container.NewVScroll(a))
 	}
 
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, left, right))
+	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, nil, right, left))
 }
 
 func (e *Abilities) toggleAllMagic(max bool) {

@@ -175,6 +175,9 @@ func (s *Save) preSave() (err error) {
 	return
 }
 
+// preCharacterSaveFF1 makes every spell set in a slot owned by the character:
+// it must be in Abilities and its content ID in AdditionAbilityIds, each ID
+// listed once. In FF I a spell's content ID is its ability ID + 208.
 func (s *Save) preCharacterSaveFF1(c *Character) (err error) {
 	owned := make(map[int]bool)
 	abilities := make(map[int]bool)
@@ -182,28 +185,41 @@ func (s *Save) preCharacterSaveFF1(c *Character) (err error) {
 		owned[i] = true
 	}
 	for _, a := range c.Abilities {
+		// Abilities added in the editor only have an ability ID.
+		if a.ContentID == 0 && a.AbilityID > 0 {
+			a.ContentID = a.AbilityID + 208
+		}
 		abilities[a.ContentID] = true
 	}
+	addOwned := func(contentID int) {
+		if contentID > 0 && !owned[contentID] {
+			c.AdditionAbilityIds = append(c.AdditionAbilityIds, contentID)
+			owned[contentID] = true
+		}
+	}
 	for _, asd := range c.AbilitySlotData {
+		if asd.SlotInfo == nil {
+			continue
+		}
 		for _, sd := range asd.SlotInfo.Values {
+			if sd == nil {
+				continue
+			}
 			if sd.AbilityID > 0 {
 				sd.ContentID = sd.AbilityID + 208
 			}
 			if sd.ContentID > 0 {
-				if _, ok := owned[sd.ContentID]; !ok {
-					c.AdditionAbilityIds = append(c.AdditionAbilityIds, sd.ContentID)
-				}
-				if _, ok := abilities[sd.ContentID]; !ok {
+				addOwned(sd.ContentID)
+				if !abilities[sd.ContentID] {
 					c.Abilities = append(c.Abilities, &save.Ability{AbilityID: sd.AbilityID, ContentID: sd.ContentID})
+					abilities[sd.ContentID] = true
 				}
 			}
 		}
 	}
 	for _, a := range c.Abilities {
 		if a.AbilityID > 0 {
-			if _, ok := owned[a.ContentID]; !ok {
-				c.AdditionAbilityIds = append(c.AdditionAbilityIds, a.ContentID)
-			}
+			addOwned(a.ContentID)
 		}
 	}
 	return

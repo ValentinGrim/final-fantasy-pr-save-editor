@@ -67,7 +67,9 @@ func NewFileIO(kind Kind, game global.Game, window fyne.Window, dir string, onSe
 	w.dir.AddListener(w)
 	w.saveType = widget.NewSelect([]string{"PC", "Playstation"}, func(s string) {
 		config.SetEnablePlayStation(s == "Playstation")
-		// w.DataChanged()
+		// The buttons hold the save type and the file name, rebuild them for the new type. This also runs from
+		// SetSelected below, before NewFileIO returns, which is fine as w.dir and w.buttons are already set.
+		w.DataChanged()
 	})
 	if config.EnablePlayStation() {
 		w.saveType.SetSelected("Playstation")
@@ -87,6 +89,8 @@ func (w *saveSelect) DataChanged() {
 		found    bool
 		saveType = global.PC
 	)
+	// Always drop the old buttons: they hold the previous directory and save type.
+	w.buttons.RemoveAll()
 	if err != nil {
 		return
 	}
@@ -94,18 +98,18 @@ func (w *saveSelect) DataChanged() {
 		saveType = global.PS
 	}
 
-	if d, err = os.ReadDir(dir); err == nil {
-		for _, f := range d {
-			if !f.IsDir() {
-				if fi, err = f.Info(); err == nil {
-					m[f.Name()] = fi
-				}
+	if d, err = os.ReadDir(dir); err != nil {
+		return
+	}
+	for _, f := range d {
+		if !f.IsDir() {
+			if fi, err = f.Info(); err == nil {
+				m[f.Name()] = fi
 			}
 		}
 	}
-	if len(m) > 0 {
+	if len(m) > 0 || w.kind == Save {
 		var key string
-		w.buttons.RemoveAll()
 		for _, save := range saves {
 			if saveType == global.PS {
 				key = fmt.Sprintf("slot%d.sav", save.Slot)

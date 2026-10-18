@@ -52,7 +52,6 @@ type (
 	}
 	menuItem struct {
 		*fyne.MenuItem
-		onSelected func()
 	}
 )
 
@@ -136,29 +135,28 @@ func (g *gui) gameSelected(game global.Game) {
 	g.canvas.Add(io.NewFileIO(io.Load, game, g.window, config.Dir(game), func(game global.Game, name, dir, f string, slot int, saveType global.SaveFileType) {
 		defer func() { g.open.Disabled = false }()
 		// Load file
-		config.SetSaveDir(game, dir)
-		if data, err := file.LoadSave(game, dir, f, saveType); err != nil {
+		data, err := file.LoadSave(game, dir, f, saveType)
+		var s *core.Save
+		if err == nil {
+			// NewSave returns a partial save along with its error: never let it replace the loaded one.
+			s, err = core.NewSave(data)
+		}
+		if err != nil {
 			if g.prev != nil {
 				g.canvas.RemoveAll()
 				g.canvas.Add(g.prev)
 			}
 			dialog.NewError(err, g.window).Show()
 		} else {
-			if g.data, err = core.NewSave(data); err != nil {
-				if g.prev != nil {
-					g.canvas.RemoveAll()
-					g.canvas.Add(g.prev)
-				}
-				dialog.NewError(err, g.window).Show()
-			} else {
-				// Success
-				g.canvas.RemoveAll()
-				g.prev = nil
-				g.save.Disabled = false
-				finder.Load(game, g.data.Characters.All())
-				g.canvas.Add(selections.NewEditor(game, g.data))
-				g.window.SetTitle(fmt.Sprintf("%s - FF%d - slot %d", appName, game, slot))
-			}
+			// Success
+			config.SetSaveDir(game, dir)
+			g.data = s
+			g.canvas.RemoveAll()
+			g.prev = nil
+			g.save.Disabled = false
+			finder.Load(game, g.data.Characters.All())
+			g.canvas.Add(selections.NewEditor(game, g.data))
+			g.window.SetTitle(fmt.Sprintf("%s - FF%d - slot %d", appName, game, slot))
 		}
 	}, func() {
 		defer func() { g.open.Disabled = false }()
@@ -233,7 +231,7 @@ func (m menuItem) Enable() {
 }
 
 func (m menuItem) OnSelected(f func()) {
-	m.onSelected = f
+	m.MenuItem.Action = f
 }
 
 func createSupportMenu(w fyne.Window) *fyne.Menu {

@@ -7,9 +7,10 @@ Supports editing `Final Fantasy VI Pixel Remastered` Save files.
 - Map data including player world/map/position/facing, Black Jack world/position/facing, and Falcon world/position/facing.
 - Bestiary and ability to mark every mob as being defeated
 
-Known Issue:
-Better multi-lingual support is coming with an update for the GUI API. For now, if a certain language is needed, download a TTF of that language and place it in the same directory as `FFPR_Save_Editor.exe` (or point the `FYNE_FONT` environment variable at it, e.g. `FYNE_FONT=/path/to/font.ttf`) and then start the application.
-Google search with `"free [language] fonts"` for TTF downloads. Replace `[lanugage]` with what you need, ie: `"free japanese fonts"`
+### Non-Latin text (Japanese, Chinese, Korean, ...)
+The editor uses your system fonts for any character its built-in font lacks, so names in other scripts normally display without any setup. This works out of the box on Windows, and on Linux when a suitable font is installed (e.g. `noto-fonts-cjk` on Arch, `fonts-noto-cjk` on Debian/Ubuntu).
+
+If characters still show as boxes, either install such a font system-wide, or place a `.ttf`, `.otf` or `.ttc` font file next to the executable (or in the editor's config folder) and restart the editor. The first font found is used for the whole interface. Setting the `FYNE_FONT` environment variable to a `.ttf`/`.otf` path also works and takes precedence.
 
 ![main](https://github.com/KiameV/final-fantasy-pr-save-editor/assets/26260306/091d8b7a-f445-4526-967b-48df49cbc459)
 ![1](https://github.com/KiameV/final-fantasy-pr-save-editor/assets/26260306/dcfcf3cd-5662-444f-b2d8-7d69a849a148)
@@ -36,8 +37,6 @@ A native Linux build is available (see [Building](#building)). Saves of the Stea
 The editor tries to detect these folders automatically; if it can't find yours, use the `Change` button to pick the save directory.
 
 The configuration file is stored in `~/.config/ffpr-save-editor/` on Linux and in `%AppData%\ffpr-save-editor\` on Windows. If a `prSaveEditor.config` already sits next to the executable, that one is used instead (portable mode).
-
-For non-Latin languages, set `FYNE_FONT=/path/to/font.ttf` when starting the editor (e.g. `FYNE_FONT=~/fonts/NotoSansJP-Regular.ttf ./FFPR_Save_Editor`), as an alternative to placing the TTF next to the executable.
 
 ## Building
 

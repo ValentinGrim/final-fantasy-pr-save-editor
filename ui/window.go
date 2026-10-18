@@ -2,13 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"os"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"pixel-remastered-save-editor/browser"
 	"pixel-remastered-save-editor/global"
@@ -62,25 +61,15 @@ var (
 )
 
 func New() Gui {
-	if wd, err := os.Getwd(); err == nil {
-		var dir []os.DirEntry
-		if dir, err = os.ReadDir(wd); err == nil {
-			for _, f := range dir {
-				if !f.IsDir() && strings.HasSuffix(f.Name(), ".ttf") {
-					_ = os.Setenv("FYNE_FONT", f.Name())
-					break
-				}
-			}
-		}
+	a := app.NewWithID(appID)
+	if f := userFont(); f != nil {
+		a.Settings().SetTheme(fontTheme{Theme: theme.DefaultTheme(), font: f})
 	}
-	var (
-		a = app.NewWithID(appID)
-		g = &gui{
-			app:    a,
-			window: a.NewWindow(fmt.Sprintf("%s - v%s", appName, browser.Version)),
-			canvas: container.NewStack(),
-		}
-	)
+	g := &gui{
+		app:    a,
+		window: a.NewWindow(fmt.Sprintf("%s - v%s", appName, browser.Version)),
+		canvas: container.NewStack(),
+	}
 	g.window.SetIcon(fyne.NewStaticResource("icon", bundled.ResourceIconPng.StaticContent))
 	g.window.SetContent(g.canvas)
 	g.open = fyne.NewMenuItem("Open", func() {

@@ -33,6 +33,7 @@ type (
 		Canvas() *fyne.Container
 		Load()
 		Save()
+		Restore()
 		Run()
 	}
 	gui struct {
@@ -41,8 +42,10 @@ type (
 		canvas *fyne.Container
 		open   *fyne.MenuItem
 		save   *fyne.MenuItem
-		prev   fyne.CanvasObject
-		data   *core.Save
+		// restore is available except while a save page is open
+		restore *fyne.MenuItem
+		prev    fyne.CanvasObject
+		data    *core.Save
 	}
 	MenuItem interface {
 		Item() *fyne.MenuItem
@@ -97,11 +100,16 @@ func New() Gui {
 		g.Save()
 	})
 	g.save.Disabled = true
+	g.restore = fyne.NewMenuItem("Restore backup…", func() {
+		g.Restore()
+	})
 	g.window.SetMainMenu(fyne.NewMainMenu(
 		fyne.NewMenu("File",
 			g.open,
 			fyne.NewMenuItemSeparator(),
 			g.save,
+			fyne.NewMenuItemSeparator(),
+			g.restore,
 		),
 		createSupportMenu(g.window)))
 	g.window.Resize(fyne.NewSize(float32(global.WindowWidth), float32(global.WindowHeight)))
@@ -124,6 +132,8 @@ func (g *gui) Load() {
 	if len(g.canvas.Objects) > 0 {
 		g.prev = g.canvas.Objects[0]
 	}
+	// Restore stays available on the Load pages: a save that no longer opens is
+	// when a backup is needed most. Its Back returns to the Load page.
 	g.open.Disabled = true
 	g.canvas.RemoveAll()
 	g.canvas.Add(io.NewGameSelect(g.gameSelected))
@@ -136,7 +146,10 @@ func (g *gui) gameSelected(game global.Game) {
 	}
 	g.canvas.RemoveAll()
 	g.canvas.Add(io.NewFileIO(io.Load, game, g.window, config.Dir(game), func(game global.Game, name, dir, f string, slot int, saveType global.SaveFileType) {
-		defer func() { g.open.Disabled = false }()
+		defer func() {
+			g.open.Disabled = false
+			g.restore.Disabled = false
+		}()
 		// Load file
 		data, err := file.LoadSave(game, dir, f, saveType)
 		var s *core.Save
@@ -162,7 +175,10 @@ func (g *gui) gameSelected(game global.Game) {
 			g.window.SetTitle(fmt.Sprintf("%s - FF%d - slot %d", appName, game, slot))
 		}
 	}, func() {
-		defer func() { g.open.Disabled = false }()
+		defer func() {
+			g.open.Disabled = false
+			g.restore.Disabled = false
+		}()
 		// Cancel
 		if g.prev != nil {
 			g.canvas.RemoveAll()
@@ -177,12 +193,14 @@ func (g *gui) Save() {
 	}
 	g.open.Disabled = true
 	g.save.Disabled = true
+	g.restore.Disabled = true
 	g.canvas.RemoveAll()
 	g.canvas.Add(
 		io.NewFileIO(io.Save, g.data.Data.Game, g.window, config.Dir(g.data.Data.Game), func(game global.Game, name, dir, f string, slot int, saveType global.SaveFileType) {
 			defer func() {
 				g.open.Disabled = false
 				g.save.Disabled = false
+				g.restore.Disabled = false
 			}()
 			// Save file
 			config.SetSaveDir(game, dir)
@@ -208,6 +226,7 @@ func (g *gui) Save() {
 			defer func() {
 				g.open.Disabled = false
 				g.save.Disabled = false
+				g.restore.Disabled = false
 			}()
 			// Cancel
 			if g.prev != nil {
@@ -215,6 +234,32 @@ func (g *gui) Save() {
 				g.canvas.Add(g.prev)
 			}
 		}))
+}
+
+// Restore asks for a game, then shows the page restoring one of its backups.
+// Back returns to the screen shown before, with the menus as they were.
+func (g *gui) Restore() {
+	var prev fyne.CanvasObject
+	if len(g.canvas.Objects) > 0 {
+		prev = g.canvas.Objects[0]
+	}
+	openDisabled, saveDisabled := g.open.Disabled, g.save.Disabled
+	g.open.Disabled, g.save.Disabled, g.restore.Disabled = true, true, true
+	back := func() {
+		g.open.Disabled, g.save.Disabled, g.restore.Disabled = openDisabled, saveDisabled, false
+		g.canvas.RemoveAll()
+		if prev != nil {
+			g.canvas.Add(prev)
+		} else {
+			g.Load()
+		}
+	}
+	g.canvas.RemoveAll()
+	g.canvas.Add(container.NewBorder(nil, widget.NewButton("Cancel", back), nil, nil,
+		io.NewGameSelect(func(game global.Game) {
+			g.canvas.RemoveAll()
+			g.canvas.Add(io.NewRestore(game, g.window, back))
+		})))
 }
 
 func (g *gui) Run() {

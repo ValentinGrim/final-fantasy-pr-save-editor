@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"time"
 
 	"pixel-remastered-save-editor/global"
-	"pixel-remastered-save-editor/save/config"
 )
 
 // maxBackups is how many backup folders are kept per game.
@@ -24,9 +24,7 @@ var (
 	// backupRoot returns the folder holding the backups. It is next to the
 	// config file, outside the save directory, so that neither the game nor
 	// Steam Cloud ever see the copies. Tests replace it.
-	backupRoot = func() string {
-		return filepath.Join(filepath.Dir(config.Path()), "backups")
-	}
+	backupRoot = defaultBackupRoot
 	// now and renameFile are replaced by tests.
 	now        = time.Now
 	renameFile = os.Rename
@@ -38,7 +36,16 @@ var (
 // folder <backupRoot>/FF<n>/<YYYYMMDD-HHMMSS>/, then removes the oldest
 // folders so that only maxBackups remain. It returns the folder created, or ""
 // when none of the files exists yet. On error nothing is left behind.
-func backupFiles(game global.Game, dir string, names ...string) (folder string, err error) {
+func backupFiles(game global.Game, dir string, saveType global.SaveFileType, reason string, names ...string) (folder string, err error) {
+	if folder, err = makeBackup(game, dir, saveType, reason, names...); err == nil && folder != "" {
+		pruneBackups(filepath.Dir(folder), maxBackups)
+	}
+	return
+}
+
+// makeBackup is backupFiles without the pruning. Along with the copies, the
+// folder gets a manifest (see manifestName) recording where they came from.
+func makeBackup(game global.Game, dir string, saveType global.SaveFileType, reason string, names ...string) (folder string, err error) {
 	var existing []string
 	for _, n := range names {
 		fi, err := os.Stat(filepath.Join(dir, n))
@@ -57,27 +64,44 @@ func backupFiles(game global.Game, dir string, names ...string) (folder string, 
 		return "", nil
 	}
 
-	gameDir := filepath.Join(backupRoot(), fmt.Sprintf("FF%d", game))
+	gameDir := BackupsDir(game)
 	if err = os.MkdirAll(gameDir, 0o755); err != nil {
 		return "", err
 	}
-	if folder, err = makeBackupFolder(gameDir); err != nil {
+	created := now()
+	if folder, err = makeBackupFolder(gameDir, created); err != nil {
 		return "", err
 	}
+	defer func() {
+		if err != nil {
+			_ = os.RemoveAll(folder)
+			folder = ""
+		}
+	}()
 	for _, n := range existing {
 		if err = copyFile(filepath.Join(dir, n), filepath.Join(folder, n)); err != nil {
-			_ = os.RemoveAll(folder)
-			return "", err
+			return
 		}
 	}
-	pruneBackups(gameDir, maxBackups)
-	return folder, nil
+	if abs, aerr := filepath.Abs(dir); aerr == nil {
+		dir = abs
+	}
+	err = writeManifest(folder, manifest{
+		Version:   manifestVersion,
+		Game:      int(game),
+		SourceDir: dir,
+		Created:   created.Format(time.RFC3339),
+		Files:     existing,
+		SaveType:  saveTypeName(saveType),
+		Reason:    reason,
+	})
+	return
 }
 
 // makeBackupFolder creates a new timestamped folder in gameDir. Saving twice
 // in the same second adds a -2, -3... suffix.
-func makeBackupFolder(gameDir string) (string, error) {
-	stamp := now().Format(backupTimeLayout)
+func makeBackupFolder(gameDir string, t time.Time) (string, error) {
+	stamp := t.Format(backupTimeLayout)
 	for i := 1; i < 100; i++ {
 		name := stamp
 		if i > 1 {
@@ -96,9 +120,10 @@ func makeBackupFolder(gameDir string) (string, error) {
 }
 
 // pruneBackups removes the oldest backup folders of gameDir beyond keep.
-// Only folders named by makeBackupFolder are considered. Errors are ignored:
-// a backup that cannot be removed does no harm.
-func pruneBackups(gameDir string, keep int) {
+// Only folders named by makeBackupFolder are considered, and the folders named
+// in protect are never removed (they still count towards keep). Errors are
+// ignored: a backup that cannot be removed does no harm.
+func pruneBackups(gameDir string, keep int, protect ...string) {
 	entries, err := os.ReadDir(gameDir)
 	if err != nil {
 		return
@@ -109,13 +134,21 @@ func pruneBackups(gameDir string, keep int) {
 			dirs = append(dirs, e.Name())
 		}
 	}
-	if len(dirs) <= keep {
+	remove := len(dirs) - keep
+	if remove <= 0 {
 		return
 	}
 	// The names sort chronologically.
 	sort.Strings(dirs)
-	for _, d := range dirs[:len(dirs)-keep] {
+	for _, d := range dirs {
+		if remove == 0 {
+			break
+		}
+		if slices.Contains(protect, d) {
+			continue
+		}
 		_ = os.RemoveAll(filepath.Join(gameDir, d))
+		remove--
 	}
 }
 

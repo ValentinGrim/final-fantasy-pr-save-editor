@@ -58,6 +58,18 @@ func listDir(t *testing.T, dir string) []string {
 	return names
 }
 
+// backupContent lists the files of a backup folder, without its manifest.
+func backupContent(t *testing.T, folder string) []string {
+	t.Helper()
+	var files []string
+	for _, n := range listDir(t, folder) {
+		if n != manifestName {
+			files = append(files, n)
+		}
+	}
+	return files
+}
+
 func assertNoTempFiles(t *testing.T, dir string) {
 	t.Helper()
 	for _, n := range listDir(t, dir) {
@@ -138,7 +150,7 @@ func TestSaveSaveBacksUp(t *testing.T) {
 	if len(folders) != 2 {
 		t.Fatalf("backup folders = %v", folders)
 	}
-	if files := listDir(t, filepath.Join(root, "FF2", folders[1])); len(files) != 1 || files[0] != "slot" {
+	if files := backupContent(t, filepath.Join(root, "FF2", folders[1])); len(files) != 1 || files[0] != "slot" {
 		t.Fatalf("second backup = %v, the bestiary written by the first save must not be rewritten", files)
 	}
 	assertNoTempFiles(t, dir)
@@ -214,7 +226,7 @@ func TestBackupPruning(t *testing.T) {
 
 	var made []string
 	for i := 0; i < 3; i++ {
-		folder, err := backupFiles(global.One, dir, "slot", bestiaryFile)
+		folder, err := backupFiles(global.One, dir, global.PC, ReasonSave, "slot", bestiaryFile)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,7 +250,7 @@ func TestBackupPruning(t *testing.T) {
 		t.Fatalf("wrong backups pruned: %v", backups)
 	}
 	// Only existing files are copied.
-	if got := listDir(t, filepath.Join(gameDir, made[0])); len(got) != 1 || got[0] != "slot" {
+	if got := backupContent(t, filepath.Join(gameDir, made[0])); len(got) != 1 || got[0] != "slot" {
 		t.Fatalf("backup content = %v", got)
 	}
 }
@@ -255,7 +267,7 @@ func TestBackupSameSecond(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 3; i++ {
-		if _, err := backupFiles(global.Four, dir, "slot"); err != nil {
+		if _, err := backupFiles(global.Four, dir, global.PC, ReasonSave, "slot"); err != nil {
 			t.Fatal(err)
 		}
 	}

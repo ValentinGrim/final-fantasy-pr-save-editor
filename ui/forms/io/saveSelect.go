@@ -46,14 +46,7 @@ const (
 )
 
 func NewFileIO(kind Kind, game global.Game, window fyne.Window, dir string, onSelected OnSelect, onCancel func()) *saveSelect {
-	if _, err := os.Stat(dir); err != nil {
-		dir = "."
-	}
-	if dir == "" || dir == "." {
-		if dir = defaultSaveDir(game); dir == "" {
-			dir = "."
-		}
-	}
+	dir = initialSaveDir(game, dir)
 	w := &saveSelect{
 		kind:       kind,
 		game:       game,

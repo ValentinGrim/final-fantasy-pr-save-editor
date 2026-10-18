@@ -39,6 +39,12 @@ The editor tries to detect these folders automatically; if it can't find yours, 
 
 The configuration file is stored in `~/.config/ffpr-save-editor/` on Linux and in `%AppData%\ffpr-save-editor\` on Windows. If a `prSaveEditor.config` already sits next to the executable, that one is used instead (portable mode).
 
+### Backups
+
+Each time the editor overwrites a save, the files it replaces (the slot, and the bestiary when it changed) are first copied to a `backups` folder next to the configuration file: `~/.config/ffpr-save-editor/backups/` on Linux, `%AppData%\ffpr-save-editor\backups\` on Windows, or next to the executable in portable mode. There is one subfolder per game (`FF1` to `FF6`) and one dated folder per save; the 20 most recent are kept for each game.
+
+To put one back, use `File > Restore backup…`, pick the game and the backup, check the directory to restore to, and press `Restore`. Close the game first, as it may overwrite the restored files. The files about to be replaced are backed up too, so a restore can itself be undone the same way.
+
 ## Building
 
 ### Requirements

@@ -119,17 +119,35 @@ func IsNewer(current, other comp) bool {
 	return current.pre && !other.pre
 }
 
-func Update(tag string) (err error) {
-	url := fmt.Sprintf(relUrl, tag)
+// Update shows the release page of tag in the default browser.
+func Update(tag string) error {
+	return start(fmt.Sprintf(relUrl, tag), "rundll32", "url.dll,FileProtocolHandler")
+}
+
+// OpenFolder shows dir in the system file manager.
+func OpenFolder(dir string) error {
+	return start(dir, "explorer")
+}
+
+// start hands target to the desktop: xdg-open on Linux, open on macOS and the
+// windows command line (target appended) on Windows. It does not wait for the
+// handler.
+func start(target string, windows ...string) error {
+	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "linux":
-		err = exec.Command("xdg-open", url).Start()
+		cmd = exec.Command("xdg-open", target)
 	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		cmd = exec.Command(windows[0], append(windows[1:], target)...)
 	case "darwin":
-		err = exec.Command("open", url).Start()
+		cmd = exec.Command("open", target)
 	default:
-		err = fmt.Errorf("unsupported platform")
+		return fmt.Errorf("unsupported platform")
 	}
-	return
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// Reap the process once the handler exits.
+	go func() { _ = cmd.Wait() }()
+	return nil
 }

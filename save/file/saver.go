@@ -37,7 +37,7 @@ func SaveSave(game global.Game, data *save.Data, slot int, dir string, file stri
 		toBackup = append(toBackup, bestiaryFile)
 	}
 
-	if _, err = backupFiles(game, dir, toBackup...); err != nil {
+	if _, err = backupFiles(game, dir, saveType, ReasonSave, toBackup...); err != nil {
 		return fmt.Errorf("could not back up the existing save, nothing was written: %w", err)
 	}
 

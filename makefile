@@ -5,13 +5,13 @@
 # On Windows: make (from an MSYS2/Git-Bash shell, with Go and a MinGW gcc on PATH)
 #
 # Useful overrides:
-#   TAGS=wayland        build a native Wayland binary (default: X11/XWayland)
+#   TAGS=...            extra Go build tags
 #   UPX=                disable upx compression (it is skipped anyway if upx is missing)
 #   WINDOWS_CC=...      C compiler used for the Windows build
 #   PREFIX=/usr/local   install prefix for install-linux (DESTDIR is honoured too)
 
 APP      := FFPR_Save_Editor
-APP_ID   := ffpr-save-editor
+APP_ID   := io.github.kiamev.ffpr-save-editor
 DIST     := dist
 
 GO       ?= go

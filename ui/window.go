@@ -23,6 +23,8 @@ import (
 
 const (
 	appName = "Final Fantasy Pixel Remastered Save Editor"
+	// appID must match the .desktop file name so Wayland compositors find the icon
+	appID = "io.github.kiamev.ffpr-save-editor"
 )
 
 type (
@@ -72,7 +74,7 @@ func New() Gui {
 		}
 	}
 	var (
-		a = app.New()
+		a = app.NewWithID(appID)
 		g = &gui{
 			app:    a,
 			window: a.NewWindow(fmt.Sprintf("%s - v%s", appName, browser.Version)),

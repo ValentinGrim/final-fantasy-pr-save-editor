@@ -44,12 +44,12 @@ For non-Latin languages, set `FYNE_FONT=/path/to/font.ttf` when starting the edi
 ### Requirements
 - Go 1.23 or newer
 - A C compiler (the GUI uses cgo)
-- On Linux, the OpenGL/X11 and GTK3 development libraries:
-  - Arch: `sudo pacman -S go gcc pkgconf gtk3 libxcursor libxrandr libxinerama libxi libxxf86vm mesa`
+- On Linux, the OpenGL, X11, Wayland and GTK3 development libraries:
+  - Arch: `sudo pacman -S go gcc pkgconf gtk3 libxcursor libxrandr libxinerama libxi libxxf86vm mesa wayland libxkbcommon`
     - plus `mingw-w64-gcc` to cross-compile the Windows build, and optionally `upx`
-  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libgtk-3-dev`
+  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libgtk-3-dev libwayland-dev libxkbcommon-dev`
     - plus `gcc-mingw-w64-x86-64` to cross-compile the Windows build, and optionally `upx`
-  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel gtk3-devel`
+  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel gtk3-devel wayland-devel libxkbcommon-devel`
     - plus `mingw64-gcc` to cross-compile the Windows build, and optionally `upx`
 
 ### Commands
@@ -68,7 +68,7 @@ All outputs go to `dist/`.
 
 If `upx` is installed the binaries are compressed with it; otherwise that step is skipped (`make UPX=` disables it explicitly).
 
-By default the Linux build runs on X11 (or XWayland). For a native Wayland build use `make build-linux TAGS=wayland`.
+The Linux binary runs natively on Wayland when available and falls back to X11 otherwise. Under Wayland the window icon comes from the installed `.desktop` file (`make install-linux`).
 
 ### Building natively on Windows
 Install Go and a MinGW-w64 gcc (e.g. [MSYS2](https://www.msys2.org/) or TDM-GCC), make sure `gcc` is on your `PATH`, then:

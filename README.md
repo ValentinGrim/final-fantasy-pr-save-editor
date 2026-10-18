@@ -1,11 +1,12 @@
-# Final Fantasy VI Save Editor
+# Final Fantasy Pixel Remaster Save Editor
 
-Supports editing `Final Fantasy VI Pixel Remastered` Save files.
-- Character Stats, Magic, Abilities, Equipment, Commands, and Jobs
-- Inventory and Important items
-- Change Party members
-- Map data including player world/map/position/facing, Black Jack world/position/facing, and Falcon world/position/facing.
-- Bestiary and ability to mark every mob as being defeated
+Edits save files of `Final Fantasy I` to `VI Pixel Remaster`, on Windows and Linux (Steam saves, and PlayStation `slotN.sav` files).
+- Character stats, magic, abilities, equipment, commands and jobs
+- Inventory and important items
+- Party members
+- Map data: player world/map/position/facing, and vehicles such as the Blackjack and the Falcon in FF VI
+- Espers (FF VI)
+- Bestiary, with an option to mark every monster as defeated
 
 ### Non-Latin text (Japanese, Chinese, Korean, ...)
 The editor uses your system fonts for any character its built-in font lacks, so names in other scripts normally display without any setup. This works out of the box on Windows, and on Linux when a suitable font is installed (e.g. `noto-fonts-cjk` on Arch, `fonts-noto-cjk` on Debian/Ubuntu).
@@ -43,12 +44,12 @@ The configuration file is stored in `~/.config/ffpr-save-editor/` on Linux and i
 ### Requirements
 - Go 1.23 or newer
 - A C compiler (the GUI uses cgo)
-- On Linux, the OpenGL, X11, Wayland and GTK3 development libraries:
-  - Arch: `sudo pacman -S go gcc pkgconf gtk3 libxcursor libxrandr libxinerama libxi libxxf86vm mesa wayland libxkbcommon`
+- On Linux, the OpenGL, X11 and Wayland development libraries:
+  - Arch: `sudo pacman -S go gcc pkgconf libxcursor libxrandr libxinerama libxi libxxf86vm mesa wayland libxkbcommon`
     - plus `mingw-w64-gcc` to cross-compile the Windows build, and optionally `upx`
-  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libgtk-3-dev libwayland-dev libxkbcommon-dev`
+  - Debian/Ubuntu: `sudo apt install golang gcc pkg-config libgl1-mesa-dev xorg-dev libwayland-dev libxkbcommon-dev`
     - plus `gcc-mingw-w64-x86-64` to cross-compile the Windows build, and optionally `upx`
-  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel gtk3-devel wayland-devel libxkbcommon-devel`
+  - Fedora: `sudo dnf install golang gcc pkgconf-pkg-config mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel wayland-devel libxkbcommon-devel`
     - plus `mingw64-gcc` to cross-compile the Windows build, and optionally `upx`
 
 ### Commands

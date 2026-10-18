@@ -9,7 +9,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/widget"
-	"github.com/sqweek/dialog"
 	"pixel-remastered-save-editor/global"
 	"pixel-remastered-save-editor/save/config"
 )
@@ -132,9 +131,10 @@ func (w *saveSelect) CreateRenderer() fyne.WidgetRenderer {
 	top := container.NewBorder(nil, nil,
 		widget.NewLabel("Directory:"),
 		widget.NewButton("Change", func() {
-			if dir, err := dialog.Directory().Title("Select save directory").Browse(); err == nil && dir != "" {
+			current, _ := w.dir.Get()
+			pickDirectory(w.window, "Select save directory", current, func(dir string) {
 				_ = w.dir.Set(dir)
-			}
+			})
 		}),
 		widget.NewEntryWithData(w.dir))
 	top = container.NewBorder(top, nil, widget.NewLabel("Save Type:"), nil, w.saveType)

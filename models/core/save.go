@@ -225,15 +225,6 @@ func (s *Save) preCharacterSaveFF1(c *Character) (err error) {
 	return
 }
 
-func (s *Save) preCharacterSaveFF2(c *Character) (err error) {
-	for _, a := range c.Abilities {
-		if a.ContentID == 0 && a.AbilityID > 0 {
-			a.ContentID = a.AbilityID + 207
-		}
-	}
-	return
-}
-
 func (s *Save) preCharacterSaveFF3(c *Character) (err error) {
 	for _, a := range c.Abilities {
 		if a.ContentID == 0 && a.AbilityID > 0 {

@@ -2,21 +2,21 @@ package ff2
 
 import (
 	"strconv"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"pixel-remastered-save-editor/models/core"
+	cff2 "pixel-remastered-save-editor/models/core/costs/ff2"
 	"pixel-remastered-save-editor/models/finder"
 	"pixel-remastered-save-editor/save"
 	"pixel-remastered-save-editor/ui/forms/inputs"
 )
 
 const (
-	abilityID  = "Ability ID"
-	skillLevel = "Skill Level"
+	abilityID   = "Ability ID"
+	skillPoints = "Skill Points"
 )
 
 type (
@@ -46,30 +46,32 @@ func NewAbilities(c *core.Character) *Abilities {
 	return e
 }
 
+// addRow edits one ability. For a spell the ability ID holds the level and
+// the second column the total skill points, so each follows the other: a new
+// level moves the points to that level's minimum, new points move the spell
+// to the level they reach.
 func (e *Abilities) addRow(a *save.Ability) {
-	lvl := inputs.NewIntEntryWithData(&a.SkillLevel)
+	pts := inputs.NewIntEntryWithData(&a.SkillLevel)
 	id := inputs.NewIdEntryWithDataWithHintWithChange(&a.AbilityID, finder.Abilities, func(s string) {
-		if j, err := strconv.Atoi(s); err == nil && j > 0 {
-			if namelvl, ok := finder.Abilities(j); ok {
-				l, _ := strconv.Atoi(strings.Split(namelvl, " ")[1])
-				var k int
-				if l <= 5 {
-					k = l * 25
-				} else if l <= 10 {
-					k = (l-5)*50 + 100
-				} else {
-					k = (l-10)*75 + 300
-				}
-				if k > l {
-					lvl.Entry.SetText(strconv.Itoa(k))
-				}
+		if j, err := strconv.Atoi(s); err == nil {
+			if lvl, ok := cff2.SpellLevel(j); ok && cff2.LevelForPoints(pts.Int()) != lvl {
+				pts.SetInt(cff2.PointsForLevel(lvl))
 			}
 		}
 	})
+	idEntry := id.ID.(*inputs.IntEntry)
+	pts.OnChanged = func(string) {
+		j := idEntry.Int()
+		if _, ok := cff2.SpellLevel(j); ok {
+			if k := cff2.SpellAtLevel(j, cff2.LevelForPoints(pts.Int())); k != j {
+				idEntry.SetInt(k)
+			}
+		}
+	}
 	var g fyne.CanvasObject
 	g = inputs.ListRow(id.Label,
 		inputs.Sized(id.ID, inputs.ColumnWidth(abilityID)),
-		inputs.Sized(lvl, inputs.ColumnWidth(skillLevel)),
+		inputs.Sized(pts, inputs.ColumnWidth(skillPoints)),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			e.c.RemoveAbility(a)
 			e.abilities.Remove(g)
@@ -80,9 +82,9 @@ func (e *Abilities) addRow(a *save.Ability) {
 // CreateRenderer lists the abilities, the search on the right.
 func (e *Abilities) CreateRenderer() fyne.WidgetRenderer {
 	id, idWidth := inputs.Header(abilityID)
-	lvl, lvlWidth := inputs.Header(skillLevel)
+	pts, ptsWidth := inputs.Header(skillPoints)
 	left := container.NewBorder(
-		inputs.ListRow(container.NewStack(), inputs.Sized(id, idWidth), inputs.Sized(lvl, lvlWidth), e.add),
+		inputs.ListRow(container.NewStack(), inputs.Sized(id, idWidth), inputs.Sized(pts, ptsWidth), e.add),
 		nil, nil, nil,
 		container.NewVScroll(e.abilities))
 	return widget.NewSimpleRenderer(inputs.WithSearch(left, inputs.GetSearches().Abilities.Panel()))

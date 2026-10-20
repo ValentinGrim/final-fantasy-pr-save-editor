@@ -152,7 +152,9 @@ func (s *Save) preSave() (err error) {
 	game := s.Game()
 
 	for _, c := range s.Characters.All() {
-		if !c.Base.IsEnableCorps {
+		// FF II characters out of the party (Minwu, Josef...) keep their
+		// spells, and the editor still edits them.
+		if !c.Base.IsEnableCorps && game != global.Two {
 			continue
 		}
 		if game == global.One {
@@ -220,15 +222,6 @@ func (s *Save) preCharacterSaveFF1(c *Character) (err error) {
 	for _, a := range c.Abilities {
 		if a.AbilityID > 0 {
 			addOwned(a.ContentID)
-		}
-	}
-	return
-}
-
-func (s *Save) preCharacterSaveFF2(c *Character) (err error) {
-	for _, a := range c.Abilities {
-		if a.ContentID == 0 && a.AbilityID > 0 {
-			a.ContentID = a.AbilityID + 207
 		}
 	}
 	return
